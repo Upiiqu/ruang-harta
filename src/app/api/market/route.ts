@@ -76,8 +76,9 @@ export async function GET() {
       }
     };
 
-    // 2. Fetch USD/IDR
+    // 2. Fetch USD/IDR & BTC/IDR
     await fetchYahoo('USDIDR=X', 'USD to IDR', 'currency', true);
+    await fetchYahoo('BTC-IDR', 'Bitcoin (IDR)', 'crypto', true);
     
     // 3. Fetch BBCA & BBRI (Delayed 15m by IDX)
     await fetchYahoo('BBCA.JK', 'Bank BCA', 'stock');
