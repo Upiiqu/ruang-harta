@@ -14,6 +14,8 @@ export async function GET() {
         const btcData = await btcRes.json();
         const price = parseFloat(btcData.lastPrice);
         const changePercent = parseFloat(btcData.priceChangePercent);
+        const changeAmount = parseFloat(btcData.priceChange);
+        const formattedChange = `${changeAmount >= 0 ? '+' : '-'}$${Math.abs(changeAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         
         marketData.push({
           symbol: 'BTC/USD',
@@ -21,6 +23,7 @@ export async function GET() {
           price: price,
           changePercent: changePercent,
           formattedPrice: `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          formattedChange: formattedChange,
           type: 'crypto'
         });
       }
@@ -44,12 +47,17 @@ export async function GET() {
             const price = meta.regularMarketPrice;
             const prevClose = meta.previousClose;
             const changePercent = ((price - prevClose) / prevClose) * 100;
+            const changeAmount = price - prevClose;
             
             let formattedPrice = '';
+            let formattedChange = '';
+            
             if (isCurrency) {
               formattedPrice = `Rp ${price.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+              formattedChange = `${changeAmount >= 0 ? '+' : '-'}Rp ${Math.abs(changeAmount).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
             } else {
               formattedPrice = `Rp ${price.toLocaleString('id-ID')}`;
+              formattedChange = `${changeAmount >= 0 ? '+' : '-'}Rp ${Math.abs(changeAmount).toLocaleString('id-ID')}`;
             }
 
             marketData.push({
@@ -58,6 +66,7 @@ export async function GET() {
               price,
               changePercent,
               formattedPrice,
+              formattedChange,
               type
             });
           }
@@ -78,7 +87,7 @@ export async function GET() {
     // Add fallback data if any failed to load just so UI doesn't look empty
     if (marketData.length === 0) {
        marketData.push({
-          symbol: 'BTC/USD', name: 'Bitcoin', price: 65000, changePercent: 1.2, formattedPrice: '$65,000.00', type: 'crypto'
+          symbol: 'BTC/USD', name: 'Bitcoin', price: 65000, changePercent: 1.2, formattedPrice: '$65,000.00', formattedChange: '+$780.00', type: 'crypto'
        });
     }
 

@@ -824,7 +824,7 @@ function MarketSnapshot() {
                   <span className="font-medium" style={{ fontSize: '0.875rem' }}>{item.formattedPrice || '-'}</span>
                   <div className="flex items-center gap-1" style={{ color: isUp ? 'var(--color-success, #10b981)' : isDown ? 'var(--color-danger, #ef4444)' : 'var(--color-text-muted)', fontSize: '0.75rem', fontWeight: 500 }}>
                     {isUp ? <TrendingUp size={12} /> : isDown ? <TrendingDown size={12} /> : null}
-                    {isUp ? '+' : ''}{change.toFixed(2)}%
+                    {item.formattedChange ? `${item.formattedChange} (${isUp ? '+' : ''}${change.toFixed(2)}%)` : `${isUp ? '+' : ''}${change.toFixed(2)}%`}
                   </div>
                 </div>
               </div>
