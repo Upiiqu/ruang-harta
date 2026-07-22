@@ -35,7 +35,7 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
 }
 
 async function generateWithGroqFallback(extractedText: string) {
-  const apiKey = process.env.GROQ_API_KEY || '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';
+  const apiKey = process.env.GROQ_API_KEY || '';
   const prompt = `Anda adalah asisten keuangan cerdas. Ekstrak data transaksi PEMASUKAN / UANG MASUK (kredit) dari teks mutasi bank ini ke dalam format JSON:
 {
   "incomes": [
