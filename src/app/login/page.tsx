@@ -28,6 +28,9 @@ export default function LoginPage() {
         setError(data.error || 'Gagal masuk.');
         return;
       }
+      if (data.name) {
+        localStorage.setItem('ruang_harta_user_name', data.name);
+      }
       router.push("/");
       router.refresh();
     } catch {

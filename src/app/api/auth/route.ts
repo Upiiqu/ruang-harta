@@ -122,7 +122,7 @@ export async function POST(request: Request) {
 
       // Create JWT and set cookie
       const token = await createToken({ userId: user.id, email: user.email, name: user.name });
-      const response = NextResponse.json({ success: true });
+      const response = NextResponse.json({ success: true, name: user.name });
       setCookieOptions(response, token, COOKIE_MAX_AGE);
       return response;
     }
