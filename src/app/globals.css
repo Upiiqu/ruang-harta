@@ -163,6 +163,7 @@ h3 { font-size: 1.125rem; line-height: 1.3; }
   background-color: var(--color-paper);
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 }
 
 .workbench-main {
@@ -256,8 +257,15 @@ h3 { font-size: 1.125rem; line-height: 1.3; }
   .workbench-nav .flex-col { 
     flex-direction: row; 
     width: 100%;
-    justify-content: space-around;
+    justify-content: flex-start;
     align-items: center;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .workbench-nav .flex-col::-webkit-scrollbar {
+    display: none;
   }
   
   .workbench-nav .nav-item, 
@@ -267,6 +275,8 @@ h3 { font-size: 1.125rem; line-height: 1.3; }
     flex-direction: column;
     justify-content: center;
     background-color: transparent !important;
+    flex-shrink: 0;
+    min-width: 64px;
   }
   
   .workbench-nav .nav-item span,
