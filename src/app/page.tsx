@@ -55,17 +55,58 @@ export default function Home() {
     
     setGreeting(`${timeGreeting}${name ? `, ${name}` : ''}`);
 
-    const existing = localStorage.getItem('ruang_harta_transactions');
-    if (existing) {
-      const txs = JSON.parse(existing);
+    const calculateBalance = (txs: any[]) => {
       let inc = 0, exp = 0, debt = 0;
       txs.forEach((t: any) => {
-        if (t.type === 'income') inc += t.amount;
-        else if (t.type === 'expense') exp += t.amount;
-        else if (t.type === 'debt') debt += t.amount;
+        if (t.type === 'income') inc += Number(t.amount) || 0;
+        else if (t.type === 'expense') exp += Number(t.amount) || 0;
+        else if (t.type === 'debt') debt += Number(t.amount) || 0;
       });
       setBalanceInfo({ total: inc - exp, income: inc, expense: exp, debt });
-    }
+    };
+
+    const loadLocalTransactions = () => {
+      const existing = localStorage.getItem('ruang_harta_transactions');
+      if (existing) {
+        const txs = JSON.parse(existing);
+        calculateBalance(txs);
+        return txs;
+      }
+      return [];
+    };
+
+    const localTxs = loadLocalTransactions();
+
+    // Sync from Supabase (WhatsApp Bot transactions)
+    fetch('/api/transactions/sync')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.transactions?.length > 0) {
+          let modified = false;
+          const currentTxs = [...localTxs];
+          
+          data.transactions.forEach((tx: any) => {
+            if (!currentTxs.find((lt: any) => lt.id === tx.id)) {
+              currentTxs.push({
+                id: tx.id,
+                type: tx.type,
+                amount: tx.amount,
+                category: tx.category,
+                description: tx.description,
+                date: tx.date || new Date().toISOString().split('T')[0]
+              });
+              modified = true;
+            }
+          });
+
+          if (modified) {
+            currentTxs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            localStorage.setItem('ruang_harta_transactions', JSON.stringify(currentTxs));
+            calculateBalance(currentTxs);
+          }
+        }
+      })
+      .catch(err => console.error('Sync err:', err));
   }, []);
 
   const toggleHideBalance = () => {
@@ -705,7 +746,7 @@ export default function Home() {
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{__html: `
+      <style>{`
         @keyframes blink { 50% { opacity: 0; } }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
@@ -716,7 +757,7 @@ export default function Home() {
           header .flex { width: 100%; justify-content: space-between; }
           .grid-2-1 { grid-template-columns: 1fr !important; }
         }
-      `}} />
+      `}</style>
     </div>
   );
 }

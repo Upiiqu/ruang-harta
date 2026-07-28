@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Target, Plus, CheckCircle2, Trash2 } from 'lucide-react';
+import { Target, Plus, CheckCircle2, Trash2, Upload, RefreshCw } from 'lucide-react';
 
 export default function TargetPage() {
   const [targets, setTargets] = useState<any[]>([]);
   const [totalBalance, setTotalBalance] = useState(0);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
   
   // New target form
   const [newTargetName, setNewTargetName] = useState("");
@@ -14,11 +16,9 @@ export default function TargetPage() {
   const [newTargetSaved, setNewTargetSaved] = useState("");
 
   useEffect(() => {
-    // Load targets
     const savedTargets = localStorage.getItem('ruang_harta_targets');
     if (savedTargets) setTargets(JSON.parse(savedTargets));
 
-    // Calculate total balance from transactions
     const existingTxs = localStorage.getItem('ruang_harta_transactions');
     if (existingTxs) {
       const txs = JSON.parse(existingTxs);
@@ -29,7 +29,51 @@ export default function TargetPage() {
       });
       setTotalBalance(inc - exp);
     }
+
+    fetch('/api/targets')
+      .then(res => res.json())
+      .then(data => {
+        if (data.targets?.length > 0) {
+          const mapped = data.targets.map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            targetAmount: Number(t.target_amount),
+            savedAmount: Number(t.saved_amount),
+            createdAt: t.created_at,
+          }));
+          setTargets(mapped);
+          localStorage.setItem('ruang_harta_targets', JSON.stringify(mapped));
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  const syncToServer = async () => {
+    setSyncing(true);
+    setSyncMsg('');
+    try {
+      const res = await fetch('/api/targets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save-all', targets }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncMsg(`Tersinkronisasi! ${targets.length} target tersimpan.`);
+      } else {
+        setSyncMsg('Gagal: ' + (data.error || 'unknown'));
+      }
+    } catch {
+      setSyncMsg('Gagal menghubungi server.');
+    }
+    setSyncing(false);
+    setTimeout(() => setSyncMsg(''), 4000);
+  };
+
+  const saveTargets = (updated: any[]) => {
+    setTargets(updated);
+    localStorage.setItem('ruang_harta_targets', JSON.stringify(updated));
+  };
 
   const handleSaveTarget = () => {
     if (!newTargetName || !newTargetAmount) return;
@@ -42,10 +86,7 @@ export default function TargetPage() {
       createdAt: new Date().toISOString()
     };
     
-    const updated = [target, ...targets];
-    setTargets(updated);
-    localStorage.setItem('ruang_harta_targets', JSON.stringify(updated));
-    
+    saveTargets([target, ...targets]);
     setShowAddModal(false);
     setNewTargetName("");
     setNewTargetAmount("");
@@ -53,9 +94,7 @@ export default function TargetPage() {
   };
 
   const handleDelete = (id: string) => {
-    const updated = targets.filter(t => t.id !== id);
-    setTargets(updated);
-    localStorage.setItem('ruang_harta_targets', JSON.stringify(updated));
+    saveTargets(targets.filter(t => t.id !== id));
   };
   
   const addFunds = (id: string, amount: number) => {
@@ -65,8 +104,7 @@ export default function TargetPage() {
       }
       return t;
     });
-    setTargets(updated);
-    localStorage.setItem('ruang_harta_targets', JSON.stringify(updated));
+    saveTargets(updated);
   };
 
   const totalAllocated = targets.reduce((sum, t) => sum + t.savedAmount, 0);
@@ -84,9 +122,20 @@ export default function TargetPage() {
           </h1>
           <p className="text-muted">Alokasikan saldo nganggurmu ke tujuan finansial yang jelas.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-          <Plus size={16} /> Buat Target Baru
-        </button>
+        <div className="flex items-center gap-3">
+          {syncMsg && (
+            <span className="text-sm" style={{ color: syncMsg.includes('Gagal') ? 'var(--color-danger)' : 'var(--color-success)' }}>
+              {syncMsg}
+            </span>
+          )}
+          <button className="btn btn-secondary flex items-center gap-2" onClick={syncToServer} disabled={syncing}>
+            {syncing ? <RefreshCw size={18} className="spin" /> : <Upload size={18} />}
+            {syncing ? 'Menyimpan...' : 'Simpan ke Server'}
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+            <Plus size={16} /> Buat Target Baru
+          </button>
+        </div>
       </header>
 
       {/* Saldo Summary */}

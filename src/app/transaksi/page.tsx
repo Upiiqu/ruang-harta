@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { ReceiptText, Trash2, ChevronDown, ChevronUp, Pencil, Check, X } from 'lucide-react';
+import { ReceiptText, Trash2, ChevronDown, ChevronUp, Pencil, Check, X, Upload, RefreshCw } from 'lucide-react';
 
 export default function TransaksiPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -10,19 +10,89 @@ export default function TransaksiPage() {
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
+
+  const loadLocal = () => {
+    const existing = localStorage.getItem('ruang_harta_transactions');
+    return existing ? JSON.parse(existing) : [];
+  };
 
   useEffect(() => {
-    const existing = localStorage.getItem('ruang_harta_transactions');
-    if (existing) {
-      setTransactions(JSON.parse(existing));
-    }
+    setTransactions(loadLocal());
+
+    fetch('/api/transactions/sync')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.transactions?.length > 0) {
+          let modified = false;
+          const currentTxs = loadLocal();
+          
+          data.transactions.forEach((tx: any) => {
+            if (!currentTxs.find((lt: any) => lt.id === tx.id)) {
+              currentTxs.push({
+                id: tx.id,
+                type: tx.type,
+                amount: tx.amount,
+                category: tx.category,
+                description: tx.description,
+                date: tx.date || new Date().toISOString().split('T')[0],
+                storeName: tx.store_name,
+                items: tx.items,
+              });
+              modified = true;
+            }
+          });
+
+          if (modified) {
+            currentTxs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            localStorage.setItem('ruang_harta_transactions', JSON.stringify(currentTxs));
+            setTransactions(currentTxs);
+          }
+        }
+      })
+      .catch(err => console.error('Sync err:', err));
   }, []);
 
-  const handleDelete = (id: string) => {
+  const syncToServer = async () => {
+    setSyncing(true);
+    setSyncMsg('');
+    try {
+      const txs = loadLocal();
+      const res = await fetch('/api/transactions/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save-all', transactions: txs }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncMsg(`Tersinkronisasi! ${txs.length} transaksi tersimpan.`);
+      } else {
+        setSyncMsg('Gagal sinkron: ' + (data.error || 'unknown'));
+      }
+    } catch {
+      setSyncMsg('Gagal menghubungi server.');
+    }
+    setSyncing(false);
+    setTimeout(() => setSyncMsg(''), 4000);
+  };
+
+  const handleDelete = async (id: string) => {
     if (confirm('Yakin ingin menghapus transaksi ini?')) {
       const updated = transactions.filter(t => t.id !== id);
       setTransactions(updated);
       localStorage.setItem('ruang_harta_transactions', JSON.stringify(updated));
+
+      // Attempt to delete from Supabase if it's synced
+      try {
+        await fetch('/api/transactions/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', transactionId: id })
+        });
+      } catch (err) {
+        console.warn('Supabase delete fallback:', err);
+      }
     }
   };
 
@@ -61,6 +131,17 @@ export default function TransaksiPage() {
         <div>
           <h1 style={{ marginBottom: 'var(--space-2)' }}>Transaksi</h1>
           <p className="text-muted">Kelola semua riwayat pengeluaran dan pemasukan Anda.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {syncMsg && (
+            <span className="text-sm" style={{ color: syncMsg.includes('Gagal') ? 'var(--color-danger)' : 'var(--color-success)' }}>
+              {syncMsg}
+            </span>
+          )}
+          <button className="btn btn-secondary flex items-center gap-2" onClick={syncToServer} disabled={syncing}>
+            {syncing ? <RefreshCw size={18} className="spin" /> : <Upload size={18} />}
+            {syncing ? 'Menyimpan...' : 'Simpan ke Server'}
+          </button>
         </div>
       </header>
 
@@ -113,12 +194,12 @@ export default function TransaksiPage() {
                             type="text" 
                             className="input-field" 
                             style={{ padding: '6px', fontSize: '0.875rem', width: '100%' }} 
-                            value={editForm.storeName || ''} 
-                            onChange={e => setEditForm({ ...editForm, storeName: e.target.value })} 
+                            value={editForm.description || editForm.storeName || ''} 
+                            onChange={e => setEditForm({ ...editForm, description: e.target.value, storeName: e.target.value })} 
                           />
                         ) : (
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{tx.storeName}</span>
+                            <span className="font-medium">{tx.description || tx.storeName}</span>
                             {tx.items && tx.items.length > 0 && (
                               <button 
                                 onClick={() => toggleExpand(tx.id)}
@@ -167,7 +248,7 @@ export default function TransaksiPage() {
                           </div>
                         ) : (
                           <span className={`badge ${tx.type === 'expense' ? 'badge-danger' : tx.type === 'income' ? 'badge-success' : ''}`} style={tx.type === 'debt' ? { backgroundColor: 'var(--color-paper-3)', border: '1px solid var(--color-border)', color: 'var(--color-text)' } : {}}>
-                            {tx.type === 'expense' ? 'Pengeluaran' : tx.type === 'income' ? `Pemasukan${tx.category ? ` (${tx.category})` : ''}` : 'Hutang / Cicilan'}
+                            {tx.type === 'expense' ? `Pengeluaran${tx.category ? ` (${tx.category})` : ''}` : tx.type === 'income' ? `Pemasukan${tx.category ? ` (${tx.category})` : ''}` : `Hutang / Cicilan${tx.category ? ` (${tx.category})` : ''}`}
                           </span>
                         )}
                       </td>

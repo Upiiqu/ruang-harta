@@ -4,7 +4,10 @@ import { createToken, COOKIE_NAME } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@/lib/supabase';
 
-const SIGNUP_SECRET = process.env.SIGNUP_SECRET_CODE || 'FINANSIAL';
+const SIGNUP_SECRET = process.env.SIGNUP_SECRET_CODE;
+if (!SIGNUP_SECRET) {
+  console.error('SIGNUP_SECRET_CODE environment variable is not set — signup is disabled');
+}
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 const BCRYPT_ROUNDS = 12;
 
@@ -42,7 +45,7 @@ export async function POST(request: Request) {
       }
 
       // Validate secret code
-      if (secretCode.toString().toUpperCase() !== SIGNUP_SECRET.toUpperCase()) {
+      if (!SIGNUP_SECRET || secretCode.toString().toUpperCase() !== SIGNUP_SECRET.toUpperCase()) {
         return NextResponse.json({ error: 'Kode akses salah. Anda tidak memiliki izin untuk mendaftar.' }, { status: 403 });
       }
 
@@ -53,8 +56,13 @@ export async function POST(request: Request) {
       }
 
       // Validate password strength
-      if (password.length < 8) {
-        return NextResponse.json({ error: 'Password minimal 8 karakter.' }, { status: 400 });
+      const passwordErrors: string[] = [];
+      if (password.length < 8) passwordErrors.push('minimal 8 karakter');
+      if (!/[A-Z]/.test(password)) passwordErrors.push('huruf besar');
+      if (!/[a-z]/.test(password)) passwordErrors.push('huruf kecil');
+      if (!/[0-9]/.test(password)) passwordErrors.push('angka');
+      if (passwordErrors.length > 0) {
+        return NextResponse.json({ error: `Password harus mengandung: ${passwordErrors.join(', ')}.` }, { status: 400 });
       }
 
       // Check if email already exists
@@ -111,7 +119,7 @@ export async function POST(request: Request) {
 
       // Use constant-time comparison to prevent timing attacks
       // Even if user not found, still run bcrypt to prevent user enumeration
-      const dummyHash = '$2b$12$invalidhashplaceholdertopreventtimingattacks00000000';
+      const dummyHash = '$2b$12$LJ3m4ys3Lg3HkF5G6Hi7O.v7hzdj6H6Jf7Kj8Hg9F0fG1hI2J3K4L5M6N7O8P9Q';
       const hashToCompare = user?.password_hash ?? dummyHash;
       const isPasswordValid = await bcrypt.compare(password, hashToCompare);
 

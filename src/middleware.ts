@@ -84,9 +84,42 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // WhatsApp webhook: 60 requests per minute (anti-abuse)
+  if (pathname === '/api/whatsapp/webhook') {
+    const { allowed } = rateLimit(ip, 'whatsapp-webhook', 60, 60 * 1000);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Terlalu banyak request. Harap tunggu.' },
+        { status: 429, headers: { 'Retry-After': '60' } }
+      );
+    }
+  }
+
+  // Transactions sync: 30 requests per minute
+  if (pathname.startsWith('/api/transactions')) {
+    const { allowed } = rateLimit(ip, 'transactions', 30, 60 * 1000);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Terlalu banyak request. Harap tunggu.' },
+        { status: 429, headers: { 'Retry-After': '60' } }
+      );
+    }
+  }
+
+  // Targets endpoint: 20 requests per minute
+  if (pathname.startsWith('/api/targets')) {
+    const { allowed } = rateLimit(ip, 'targets', 20, 60 * 1000);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Terlalu banyak request. Harap tunggu.' },
+        { status: 429, headers: { 'Retry-After': '60' } }
+      );
+    }
+  }
+
   // ── Auth Routes (always accessible) ────────────────────────────────────
   const isAuthPage = pathname === '/login' || pathname === '/signup';
-  const isPublicApi = pathname === '/api/auth';
+  const isPublicApi = pathname === '/api/auth' || pathname === '/api/whatsapp/webhook' || pathname === '/api/whatsapp/status';
   const isStaticFile = pathname.startsWith('/_next') || pathname === '/favicon.ico';
 
   if (isPublicApi || isStaticFile) return NextResponse.next();
@@ -110,11 +143,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // Attach user info to request headers for downstream use
+  // Only pass user ID — never forward PII (email, name) via headers to prevent logging/exposure
   const requestHeaders = new Headers(request.headers);
   if (user) {
     requestHeaders.set('x-user-id', user.userId);
-    requestHeaders.set('x-user-email', user.email);
-    requestHeaders.set('x-user-name', user.name);
   }
 
   return NextResponse.next({ request: { headers: requestHeaders } });

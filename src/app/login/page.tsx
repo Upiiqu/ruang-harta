@@ -28,6 +28,10 @@ export default function LoginPage() {
         setError(data.error || 'Gagal masuk.');
         return;
       }
+      // Clear previous data before setting new session data
+      localStorage.removeItem('ruang_harta_transactions');
+      localStorage.removeItem('ruang_harta_targets');
+      localStorage.removeItem('ruang_harta_hide_balance');
       if (data.name) {
         localStorage.setItem('ruang_harta_user_name', data.name);
       }

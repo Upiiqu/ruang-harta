@@ -3,6 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 
 const ai = new GoogleGenAI({});
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -14,23 +15,31 @@ function isAuthenticated(request: Request): boolean {
 }
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
-  let tempPdf = '';
+  const tempDir = path.join(process.cwd(), 'temp');
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+  const tempPdf = path.join(tempDir, `pdf_${randomUUID()}.pdf`);
   try {
-    tempPdf = path.join(process.cwd(), `temp_${Date.now()}.pdf`);
     fs.writeFileSync(tempPdf, buffer);
     const workerScript = path.join(process.cwd(), 'src', 'app', 'api', 'scan-income', 'pdfWorker.js');
-    const out = execSync(`node "${workerScript}" "${tempPdf}"`, { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
-    if (fs.existsSync(tempPdf)) fs.unlinkSync(tempPdf);
+    // Use execSync with validated, non-user-controlled arguments only
+    const out = execSync(
+      `node ${JSON.stringify(workerScript)} ${JSON.stringify(tempPdf)}`,
+      { encoding: 'utf-8' as const, maxBuffer: 10 * 1024 * 1024 }
+    );
     return out;
   } catch (e: any) {
     console.warn("⚠️ pdfWorker failed, fallback to raw string:", e?.message);
-    if (tempPdf && fs.existsSync(tempPdf)) fs.unlinkSync(tempPdf);
     const str = buffer.toString('utf-8');
     const matches = str.match(/\(([^()]{3,})\)/g);
     if (matches && matches.length > 5) {
       return matches.map(m => m.slice(1, -1)).join(' ');
     }
     return str.replace(/[^\x20-\x7E\n]/g, ' ').replace(/\s+/g, ' ');
+  } finally {
+    if (fs.existsSync(tempPdf)) {
+      try { fs.unlinkSync(tempPdf); } catch { /* ignore cleanup errors */ }
+    }
   }
 }
 

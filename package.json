@@ -13,25 +13,35 @@
   },
   "dependencies": {
     "@google/genai": "^2.12.0",
+    "@netlify/plugin-nextjs": "^5.15.12",
     "@supabase/supabase-js": "^2.110.8",
     "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@whiskeysockets/baileys": "^7.0.0-rc13",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
+    "eslint": "^9",
+    "eslint-config-next": "^16.2.12",
     "groq-sdk": "^1.3.0",
+    "jimp": "^1.6.1",
     "jose": "^6.2.4",
+    "link-preview-js": "^3.2.0",
     "lucide-react": "^1.25.0",
-    "next": "16.2.10",
+    "next": "^16.2.12",
     "pdf-parse": "^2.4.5",
+    "pino": "^10.3.1",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.9.2",
-    "@netlify/plugin-nextjs": "^5.15.12",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.10",
     "typescript": "^5"
   },
-  "devDependencies": {}
+  "overrides": {
+    "sharp": "0.35.3",
+    "postcss": "8.5.18"
+  }
 }

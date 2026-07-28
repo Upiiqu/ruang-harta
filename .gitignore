@@ -44,6 +44,9 @@ temp_*.pdf
 test-*.js
 test.js
 
+# WhatsApp Baileys session files
+auth_info_baileys/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

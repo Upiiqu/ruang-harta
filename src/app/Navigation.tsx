@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, Wallet, ReceiptText, Target, Bot, LogOut } from 'lucide-react';
+import { LayoutDashboard, Wallet, ReceiptText, Target, Bot, MessageSquare, LogOut, BookOpen, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -18,6 +18,11 @@ export function Navigation() {
         body: JSON.stringify({ action: 'logout' }),
       });
     } catch { /* ignore errors on logout */ }
+    // Clear all sensitive financial data from localStorage on logout
+    localStorage.removeItem('ruang_harta_user_name');
+    localStorage.removeItem('ruang_harta_transactions');
+    localStorage.removeItem('ruang_harta_targets');
+    localStorage.removeItem('ruang_harta_hide_balance');
     router.push('/login');
     router.refresh();
   };
@@ -63,6 +68,14 @@ export function Navigation() {
           <ReceiptText size={18} />
           <span>Transaksi</span>
         </Link>
+        <Link href="/keluarga" className={pathname === '/keluarga' ? 'nav-item-active' : 'nav-item'} style={navItemStyle(pathname === '/keluarga')}>
+          <Users size={18} />
+          <span>Keluarga</span>
+        </Link>
+        <Link href="/whatsapp" className={pathname === '/whatsapp' ? 'nav-item-active' : 'nav-item'} style={navItemStyle(pathname === '/whatsapp')}>
+          <MessageSquare size={18} />
+          <span>WhatsApp Bot</span>
+        </Link>
         <Link href="/target" className={pathname === '/target' ? 'nav-item-active' : 'nav-item'} style={navItemStyle(pathname === '/target')}>
           <Target size={18} />
           <span>Target & Tabungan</span>
@@ -70,6 +83,10 @@ export function Navigation() {
         <Link href="/ai-insights" className={pathname === '/ai-insights' ? 'nav-item-active' : 'nav-item'} style={navItemStyle(pathname === '/ai-insights')}>
           <Bot size={18} />
           <span>AI Insights</span>
+        </Link>
+        <Link href="/panduan" className={pathname === '/panduan' ? 'nav-item-active' : 'nav-item'} style={navItemStyle(pathname === '/panduan')}>
+          <BookOpen size={18} />
+          <span>Panduan</span>
         </Link>
       </div>
       

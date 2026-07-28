@@ -10,6 +10,7 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [secretCode, setSecretCode] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +18,12 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (password !== confirmPassword) {
+      setError("Password dan konfirmasi password tidak cocok.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -33,7 +40,7 @@ export default function SignupPage() {
 
       // Save user name to localStorage (non-sensitive data)
       localStorage.setItem('ruang_harta_user_name', data.name);
-      // Clear previous data for fresh start
+      // Clear previous financial data for fresh start
       localStorage.removeItem('ruang_harta_transactions');
       localStorage.removeItem('ruang_harta_targets');
 
@@ -98,9 +105,20 @@ export default function SignupPage() {
             <input 
               type="password" 
               className="input-field" 
-              placeholder="••••••••" 
+              placeholder="Min. 8 karakter, huruf besar, kecil, dan angka" 
               value={password}
               onChange={e => setPassword(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label className="text-sm font-medium">Konfirmasi Password</label>
+            <input 
+              type="password" 
+              className="input-field" 
+              placeholder="Ketik ulang password" 
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
             />
           </div>
 

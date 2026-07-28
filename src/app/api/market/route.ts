@@ -45,7 +45,7 @@ export async function GET() {
           const meta = data?.chart?.result?.[0]?.meta;
           if (meta) {
             const price = meta.regularMarketPrice;
-            const prevClose = meta.previousClose;
+            const prevClose = meta.chartPreviousClose || meta.previousClose;
             const changePercent = ((price - prevClose) / prevClose) * 100;
             const changeAmount = price - prevClose;
             
