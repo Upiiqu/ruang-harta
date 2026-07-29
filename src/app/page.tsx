@@ -78,14 +78,14 @@ export default function Home() {
 
     const localTxs = loadLocalTransactions();
 
-    // Sync from Supabase (WhatsApp Bot transactions)
-    fetch('/api/transactions/sync')
-      .then(res => res.json())
-      .then(data => {
+    const syncFromServer = async () => {
+      try {
+        const res = await fetch('/api/transactions/sync');
+        const data = await res.json();
         if (data.success && data.transactions?.length > 0) {
           let modified = false;
-          const currentTxs = [...localTxs];
-          
+          const currentTxs = loadLocalTransactions() || [];
+
           data.transactions.forEach((tx: any) => {
             if (!currentTxs.find((lt: any) => lt.id === tx.id)) {
               currentTxs.push({
@@ -106,8 +106,14 @@ export default function Home() {
             calculateBalance(currentTxs);
           }
         }
-      })
-      .catch(err => console.error('Sync err:', err));
+      } catch (err) {
+        console.error('Sync err:', err);
+      }
+    };
+
+    syncFromServer();
+    const interval = setInterval(syncFromServer, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const toggleHideBalance = () => {

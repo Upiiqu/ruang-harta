@@ -16,40 +16,46 @@ export default function TransaksiPage() {
     return existing ? JSON.parse(existing) : [];
   };
 
+  const syncFromServer = async () => {
+    try {
+      const res = await fetch('/api/transactions/sync');
+      const data = await res.json();
+      if (data.success && data.transactions?.length > 0) {
+        let modified = false;
+        const currentTxs = loadLocal();
+
+        data.transactions.forEach((tx: any) => {
+          if (!currentTxs.find((lt: any) => lt.id === tx.id)) {
+            currentTxs.push({
+              id: tx.id,
+              type: tx.type,
+              amount: tx.amount,
+              category: tx.category,
+              description: tx.description,
+              date: tx.date || new Date().toISOString().split('T')[0],
+              storeName: tx.store_name,
+              items: tx.items,
+            });
+            modified = true;
+          }
+        });
+
+        if (modified) {
+          currentTxs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          localStorage.setItem('ruang_harta_transactions', JSON.stringify(currentTxs));
+          setTransactions(currentTxs);
+        }
+      }
+    } catch (err) {
+      console.error('Sync err:', err);
+    }
+  };
+
   useEffect(() => {
     setTransactions(loadLocal());
-
-    fetch('/api/transactions/sync')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.transactions?.length > 0) {
-          let modified = false;
-          const currentTxs = loadLocal();
-          
-          data.transactions.forEach((tx: any) => {
-            if (!currentTxs.find((lt: any) => lt.id === tx.id)) {
-              currentTxs.push({
-                id: tx.id,
-                type: tx.type,
-                amount: tx.amount,
-                category: tx.category,
-                description: tx.description,
-                date: tx.date || new Date().toISOString().split('T')[0],
-                storeName: tx.store_name,
-                items: tx.items,
-              });
-              modified = true;
-            }
-          });
-
-          if (modified) {
-            currentTxs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            localStorage.setItem('ruang_harta_transactions', JSON.stringify(currentTxs));
-            setTransactions(currentTxs);
-          }
-        }
-      })
-      .catch(err => console.error('Sync err:', err));
+    syncFromServer();
+    const interval = setInterval(syncFromServer, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleDelete = async (id: string) => {
