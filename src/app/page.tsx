@@ -85,65 +85,38 @@ export default function Home() {
         const serverTxs = (data.success && data.transactions) ? data.transactions : [];
         const localTxs = loadLocalTransactions() || [];
 
-        // Build a map keyed by id for efficient lookup
-        const mergedMap = new Map<string, any>();
-
-        // Start with local transactions
-        localTxs.forEach((tx: any) => {
-          if (tx.id) mergedMap.set(tx.id, tx);
+        // Server is the single source of truth.
+        // Build merged list: start from server, add local-only items.
+        const serverMap = new Map<string, any>();
+        serverTxs.forEach((tx: any) => {
+          serverMap.set(tx.id, {
+            id: tx.id,
+            type: tx.type,
+            amount: tx.amount,
+            category: tx.category,
+            description: tx.description,
+            date: tx.date || new Date().toISOString().split('T')[0],
+            storeName: tx.store_name,
+            items: tx.items,
+          });
         });
 
-        // Merge server transactions — server is source of truth for known IDs
-        let modified = false;
-        serverTxs.forEach((tx: any) => {
-          const existing = mergedMap.get(tx.id);
-          if (!existing) {
-            // New from server — add to local
-            mergedMap.set(tx.id, {
-              id: tx.id,
-              type: tx.type,
-              amount: tx.amount,
-              category: tx.category,
-              description: tx.description,
-              date: tx.date || new Date().toISOString().split('T')[0],
-              storeName: tx.store_name,
-              items: tx.items,
-            });
-            modified = true;
-          } else {
-            // Update local with server values if different (server wins)
-            const serverAmount = Number(tx.amount) || 0;
-            const localAmount = Number(existing.amount) || 0;
-            if (
-              existing.type !== tx.type ||
-              localAmount !== serverAmount ||
-              existing.category !== tx.category ||
-              existing.description !== tx.description ||
-              existing.date !== tx.date
-            ) {
-              mergedMap.set(tx.id, {
-                ...existing,
-                type: tx.type,
-                amount: tx.amount,
-                category: tx.category,
-                description: tx.description,
-                date: tx.date || existing.date,
-                storeName: tx.store_name || existing.storeName,
-                items: tx.items || existing.items,
-              });
-              modified = true;
-            }
+        // Find local-only transactions (not yet on server) to push
+        const unsynced: any[] = [];
+        localTxs.forEach((tx: any) => {
+          if (tx.id && !serverMap.has(tx.id)) {
+            unsynced.push(tx);
+            serverMap.set(tx.id, tx); // include in merged for now
           }
         });
 
-        // Check for local-only transactions to push to server
-        const serverIds = new Set(serverTxs.map((t: any) => t.id));
-        const unsynced = localTxs.filter((t: any) => t.id && !serverIds.has(t.id));
-
-        const merged = Array.from(mergedMap.values());
+        const merged = Array.from(serverMap.values());
         merged.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-        if (modified || unsynced.length > 0) {
+        // Always update localStorage with server truth + local unsynced
+        const currentJson = JSON.stringify(localTxs);
+        const mergedJson = JSON.stringify(merged);
+        if (currentJson !== mergedJson) {
           localStorage.setItem('ruang_harta_transactions', JSON.stringify(merged));
           calculateBalance(merged);
         }
@@ -153,7 +126,7 @@ export default function Home() {
           await fetch('/api/transactions/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'save-all', transactions: merged }),
+            body: JSON.stringify({ action: 'save-all', transactions: unsynced }),
           });
         }
       } catch (err) {
@@ -212,7 +185,7 @@ export default function Home() {
     
     // Add new
     const newTx = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       date: scanResult.date || new Date().toISOString().split('T')[0],
       storeName: scanResult.storeName || 'Toko Tidak Diketahui',
       amount: scanResult.totalAmount || 0,
@@ -268,7 +241,7 @@ export default function Home() {
     let transactions = existing ? JSON.parse(existing) : [];
     
     const newTxs = selectedItems.map((item: any, idx: number) => ({
-      id: `${Date.now()}-${idx}`,
+      id: crypto.randomUUID(),
       date: item.date || new Date().toISOString().split('T')[0],
       storeName: item.sourceName || 'Pemasukan Tidak Diketahui',
       amount: item.totalAmount || 0,
@@ -324,7 +297,7 @@ export default function Home() {
     let transactions = existing ? JSON.parse(existing) : [];
     
     const newTx = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       date: debtResult.date || new Date().toISOString().split('T')[0],
       storeName: debtResult.creditorName || 'Tagihan Hutang',
       amount: debtResult.installmentAmount || 0,

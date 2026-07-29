@@ -44,8 +44,12 @@ function sanitizeTransaction(tx: any, userId: string, familyId: string | null): 
     family_id: familyId,
   };
 
-  // Preserve client-side id so upsert on conflict 'id' works correctly
-  if (tx.id) safe.id = String(tx.id);
+  // Preserve client-side id only if it's a valid UUID format
+  // IDs like "1722278400000" (Date.now) are NOT valid UUIDs and would cause Supabase errors
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (tx.id && UUID_REGEX.test(String(tx.id))) {
+    safe.id = String(tx.id);
+  }
 
   const ALLOWED_FIELDS = ['type', 'amount', 'category', 'description', 'date', 'items', 'storeName', 'store_name'] as const;
 
@@ -105,29 +109,38 @@ export async function POST(request: Request) {
       const familyInfo = await getUserFamily(userId);
       const familyId = familyInfo?.family.id || null;
 
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
       // 1. Upsert all client transactions
       if (transactions.length > 0) {
         const rows = transactions.map((tx: any) => sanitizeTransaction(tx, userId, familyId));
-        const { error: insErr } = await supabase.from('transactions').upsert(rows, { onConflict: 'id' });
-        if (insErr) {
-          console.error('Replace-all upsert error:', insErr);
-          return NextResponse.json({ error: 'Gagal menyimpan transaksi' }, { status: 500 });
+        // Split: rows WITH valid id → upsert, rows WITHOUT → insert (let Supabase generate UUID)
+        const upsertRows = rows.filter(r => r.id);
+        const insertRows = rows.filter(r => !r.id);
+
+        if (upsertRows.length > 0) {
+          const { error: upsErr } = await supabase.from('transactions').upsert(upsertRows, { onConflict: 'id' });
+          if (upsErr) console.error('Replace-all upsert error:', upsErr);
+        }
+        if (insertRows.length > 0) {
+          const { error: insErr } = await supabase.from('transactions').insert(insertRows);
+          if (insErr) console.error('Replace-all insert error:', insErr);
         }
       }
 
       // 2. Delete server-side rows that the client no longer has
-      const clientIds = transactions.map((tx: any) => String(tx.id)).filter(Boolean);
+      //    Only use valid UUIDs in the NOT IN filter
+      const clientIds = transactions
+        .map((tx: any) => String(tx.id))
+        .filter(id => id && UUID_RE.test(id));
       let deleteQuery = supabase.from('transactions').delete().eq('user_id', userId);
       if (familyId) deleteQuery = deleteQuery.eq('family_id', familyId);
       if (clientIds.length > 0) {
-        // Delete rows NOT in the client's id list
         deleteQuery = deleteQuery.not('id', 'in', `(${clientIds.join(',')})`);
       }
-      // If clientIds is empty, delete all user's transactions (user cleared everything)
       const { error: delErr } = await deleteQuery;
       if (delErr) {
         console.error('Replace-all delete error:', delErr);
-        // Non-fatal: upsert succeeded, deletion is best-effort
       }
 
       return NextResponse.json({ success: true });
