@@ -19,6 +19,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+export const supabaseAdmin = serviceRoleKey
+  ? createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } })
+  : supabase;
+
 export interface User {
   id: string;
   name: string;

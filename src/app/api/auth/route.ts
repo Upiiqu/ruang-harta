@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { createToken, COOKIE_NAME } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 import type { User } from '@/lib/supabase';
 
 const SIGNUP_SECRET = process.env.SIGNUP_SECRET_CODE;
