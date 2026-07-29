@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { ReceiptText, Trash2, ChevronDown, ChevronUp, Pencil, Check, X, Upload, RefreshCw } from 'lucide-react';
+import { ReceiptText, Trash2, ChevronDown, ChevronUp, Pencil, Check, X } from 'lucide-react';
 import { syncTransactionsToServer, deleteTransactionFromServer } from '@/lib/sync';
 
 export default function TransaksiPage() {
@@ -11,9 +11,6 @@ export default function TransaksiPage() {
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
-  const [syncing, setSyncing] = useState(false);
-  const [syncMsg, setSyncMsg] = useState('');
-
   const loadLocal = () => {
     const existing = localStorage.getItem('ruang_harta_transactions');
     return existing ? JSON.parse(existing) : [];
@@ -54,29 +51,6 @@ export default function TransaksiPage() {
       })
       .catch(err => console.error('Sync err:', err));
   }, []);
-
-  const syncToServer = async () => {
-    setSyncing(true);
-    setSyncMsg('');
-    try {
-      const txs = loadLocal();
-      const res = await fetch('/api/transactions/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save-all', transactions: txs }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSyncMsg(`Tersinkronisasi! ${txs.length} transaksi tersimpan.`);
-      } else {
-        setSyncMsg('Gagal sinkron: ' + (data.error || 'unknown'));
-      }
-    } catch {
-      setSyncMsg('Gagal menghubungi server.');
-    }
-    setSyncing(false);
-    setTimeout(() => setSyncMsg(''), 4000);
-  };
 
   const handleDelete = async (id: string) => {
     if (confirm('Yakin ingin menghapus transaksi ini?')) {
@@ -123,17 +97,6 @@ export default function TransaksiPage() {
         <div>
           <h1 style={{ marginBottom: 'var(--space-2)' }}>Transaksi</h1>
           <p className="text-muted">Kelola semua riwayat pengeluaran dan pemasukan Anda.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {syncMsg && (
-            <span className="text-sm" style={{ color: syncMsg.includes('Gagal') ? 'var(--color-danger)' : 'var(--color-success)' }}>
-              {syncMsg}
-            </span>
-          )}
-          <button className="btn btn-secondary flex items-center gap-2" onClick={syncToServer} disabled={syncing}>
-            {syncing ? <RefreshCw size={18} className="spin" /> : <Upload size={18} />}
-            {syncing ? 'Menyimpan...' : 'Simpan ke Server'}
-          </button>
         </div>
       </header>
 
