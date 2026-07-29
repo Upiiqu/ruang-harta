@@ -18,15 +18,18 @@ export default function TransaksiPage() {
 
   const syncFromServer = async () => {
     try {
-      const res = await fetch('/api/transactions/sync');
-      const data = await res.json();
-      if (data.success && data.transactions?.length > 0) {
-        let modified = false;
-        const currentTxs = loadLocal();
+      const [syncRes, localTxs] = await Promise.all([
+        fetch('/api/transactions/sync').then(r => r.json()),
+        Promise.resolve(loadLocal()),
+      ]);
 
-        data.transactions.forEach((tx: any) => {
-          if (!currentTxs.find((lt: any) => lt.id === tx.id)) {
-            currentTxs.push({
+      if (syncRes.success && syncRes.transactions?.length > 0) {
+        let modified = false;
+        const merged = [...localTxs];
+
+        syncRes.transactions.forEach((tx: any) => {
+          if (!merged.find((lt: any) => lt.id === tx.id)) {
+            merged.push({
               id: tx.id,
               type: tx.type,
               amount: tx.amount,
@@ -41,10 +44,21 @@ export default function TransaksiPage() {
         });
 
         if (modified) {
-          currentTxs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          localStorage.setItem('ruang_harta_transactions', JSON.stringify(currentTxs));
-          setTransactions(currentTxs);
+          merged.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          localStorage.setItem('ruang_harta_transactions', JSON.stringify(merged));
+          setTransactions(merged);
         }
+      }
+
+      const updatedLocal = loadLocal();
+      const serverIds = new Set((syncRes.transactions || []).map((t: any) => t.id));
+      const unsynced = updatedLocal.filter((t: any) => !serverIds.has(t.id));
+      if (unsynced.length > 0) {
+        await fetch('/api/transactions/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'save-all', transactions: updatedLocal }),
+        });
       }
     } catch (err) {
       console.error('Sync err:', err);
