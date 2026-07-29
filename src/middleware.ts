@@ -118,7 +118,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Auth Routes (always accessible) ────────────────────────────────────
-  const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/lupa-password';
   const isPublicApi = pathname === '/api/auth' || pathname === '/api/whatsapp/webhook' || pathname === '/api/whatsapp/status';
   const isStaticFile = pathname.startsWith('/_next') || pathname === '/favicon.ico';
 
