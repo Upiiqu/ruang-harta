@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, Wallet, ReceiptText, Target, Bot, MessageSquare, LogOut, BookOpen, Users } from 'lucide-react';
+import { LayoutDashboard, Wallet, ReceiptText, Target, Bot, MessageSquare, LogOut, BookOpen, Users, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -23,6 +23,7 @@ export function Navigation() {
     localStorage.removeItem('ruang_harta_transactions');
     localStorage.removeItem('ruang_harta_targets');
     localStorage.removeItem('ruang_harta_hide_balance');
+    localStorage.removeItem('ruang_harta_phone');
     router.push('/login');
     router.refresh();
   };
@@ -87,6 +88,13 @@ export function Navigation() {
         <Link href="/panduan" className={pathname === '/panduan' ? 'nav-item-active' : 'nav-item'} style={navItemStyle(pathname === '/panduan')}>
           <BookOpen size={18} />
           <span>Panduan</span>
+        </Link>
+      </div>
+      
+      <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-3)' }}>
+        <Link href="/settings" className={pathname === '/settings' ? 'nav-item-active' : 'nav-item'} style={navItemStyle(pathname === '/settings')}>
+          <Settings size={18} />
+          <span>Pengaturan</span>
         </Link>
       </div>
       

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Wallet, UserPlus, Lock, ArrowLeft } from 'lucide-react';
+import { Wallet, UserPlus, Lock, ArrowLeft, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -11,6 +11,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [secretCode, setSecretCode] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -30,7 +31,7 @@ export default function SignupPage() {
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'signup', name, email, password, secretCode }),
+        body: JSON.stringify({ action: 'signup', name, email, password, secretCode, phoneNumber }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -38,8 +39,10 @@ export default function SignupPage() {
         return;
       }
 
-      // Save user name to localStorage (non-sensitive data)
       localStorage.setItem('ruang_harta_user_name', data.name);
+      if (data.phoneNumber) {
+        localStorage.setItem('ruang_harta_phone', data.phoneNumber);
+      }
       // Clear previous financial data for fresh start
       localStorage.removeItem('ruang_harta_transactions');
       localStorage.removeItem('ruang_harta_targets');
@@ -120,6 +123,20 @@ export default function SignupPage() {
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
             />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label className="text-sm font-medium flex items-center gap-1">
+              <Phone size={14} /> Nomor WhatsApp (untuk Bot)
+            </label>
+            <input
+              type="tel"
+              className="input-field"
+              placeholder="6281234567890"
+              value={phoneNumber}
+              onChange={e => setPhoneNumber(e.target.value.replace(/[^0-9]/g, ''))}
+            />
+            <span className="text-xs text-muted">Gunakan format internasional tanpa +/spasi. Nomor ini akan digunakan bot WhatsApp untuk mengenali akunmu.</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'var(--space-2)', padding: 'var(--space-3)', backgroundColor: 'var(--color-paper-2)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-border)' }}>

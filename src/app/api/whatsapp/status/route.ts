@@ -1,28 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getWASocketStatus, initBaileysService } from '@/lib/whatsapp/baileys-service';
 
 export async function GET() {
   try {
-    // Return current status
-    const status = getWASocketStatus();
-    return NextResponse.json({
-      success: true,
-      ...status,
-    });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
-}
+    const fonnteToken = process.env.FONNTE_TOKEN || process.env.WHATSAPP_API_TOKEN;
 
-export async function POST() {
-  try {
-    // Manually trigger initialization / reconnection
-    await initBaileysService();
-    const status = getWASocketStatus();
     return NextResponse.json({
       success: true,
-      message: 'Inisialisasi Baileys WhatsApp Service berhasil dipanggil.',
-      ...status,
+      status: fonnteToken ? 'connected' : 'disconnected',
+      botNumber: process.env.WHATSAPP_BOT_NUMBER || null,
+      provider: 'fonnte',
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

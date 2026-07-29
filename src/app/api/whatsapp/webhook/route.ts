@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getUserByPhone, verifyPairingCode } from '@/lib/whatsapp/pairing';
+import { findOrCreateUserByPhone } from '@/lib/whatsapp/pairing';
 import { parseTransactionText, parseTransactionAudio, parseTransactionImage } from '@/lib/whatsapp/parser';
 import { supabase } from '@/lib/supabase';
 import { isSafeUrl } from '@/lib/url-validation';
 import crypto from 'crypto';
 
-// Helper to send reply via Fonnte API if FONNTE_TOKEN is set
 async function sendFonnteReply(target: string, message: string) {
   const fonnteToken = process.env.FONNTE_TOKEN || process.env.WHATSAPP_API_TOKEN;
   if (!fonnteToken) return;
@@ -27,7 +26,6 @@ async function sendFonnteReply(target: string, message: string) {
   }
 }
 
-// Webhook Verification (GET)
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('hub.mode');
@@ -38,14 +36,12 @@ export async function GET(request: Request) {
   if (mode === 'subscribe' && webhookVerifyToken && token === webhookVerifyToken) {
     return new NextResponse(challenge, { status: 200 });
   }
-  // Return challenge for backward compatibility (Meta webhook verification)
   if (challenge) {
     return new NextResponse(challenge, { status: 200 });
   }
   return new NextResponse('OK', { status: 200 });
 }
 
-// Handle Incoming Webhook Event (POST) from Fonnte, Wablas, Meta, or Baileys Gateway
 export async function POST(request: Request) {
   try {
     let payload: any = {};
@@ -60,11 +56,10 @@ export async function POST(request: Request) {
       });
     }
 
-    // Fonnte payload format: `sender` / `target`, `message`, `url` (file URL)
     const senderPhone = payload.sender || payload.target || payload.phone || payload.from;
     const text = payload.message || payload.text || '';
     const mediaUrl = payload.url || payload.mediaUrl || payload.imageUrl || payload.audioUrl;
-    
+
     if (!senderPhone) {
       return NextResponse.json({ error: 'Sender phone required' }, { status: 400 });
     }
@@ -72,28 +67,8 @@ export async function POST(request: Request) {
     const cleanPhone = String(senderPhone).replace(/[^0-9]/g, '');
     const cleanText = String(text).trim();
 
-    // 1. Pairing Check (kode OTP RH-xxxx)
-    if (cleanText.toUpperCase().startsWith('RH-') || cleanText.length === 6) {
-      const pairingResult = await verifyPairingCode(cleanPhone, cleanText);
-      await sendFonnteReply(cleanPhone, pairingResult.message);
-      return NextResponse.json({
-        reply: pairingResult.message,
-        paired: pairingResult.success,
-      });
-    }
+    const user = await findOrCreateUserByPhone(cleanPhone);
 
-    // 2. User Lookup
-    const user = await getUserByPhone(cleanPhone);
-    if (!user) {
-      const unlinkedMsg = `👋 *Ruang Harta Bot*\nNomor Anda (${cleanPhone}) belum terdaftar di Ruang Harta. Masukkan kode OTP Pairing dari halaman Web App Ruang Harta untuk menghubungkan akun.`;
-      await sendFonnteReply(cleanPhone, unlinkedMsg);
-      return NextResponse.json({
-        reply: unlinkedMsg,
-        paired: false,
-      });
-    }
-
-    // 3. Parse content (Image, Audio, or Text)
     let parsed = null;
 
     if (mediaUrl) {
@@ -105,7 +80,7 @@ export async function POST(request: Request) {
       const res = await fetch(mediaUrl, { signal: AbortSignal.timeout(15000) });
       const arrayBuf = await res.arrayBuffer();
       const buffer = Buffer.from(arrayBuf);
-      
+
       if (mediaUrl.match(/\.(jpg|jpeg|png|webp)/i) || contentType.includes('image')) {
         parsed = await parseTransactionImage(buffer, 'image/jpeg');
       } else {
@@ -122,7 +97,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ reply: failMsg });
     }
 
-    // 4. Save to Database
     try {
       await supabase.from('transactions').insert({
         user_id: user.id,
@@ -165,5 +139,3 @@ function validateWebhookSignature(payload: any, signature: string | null): boole
     return false;
   }
 }
-
-

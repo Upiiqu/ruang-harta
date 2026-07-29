@@ -29,6 +29,7 @@ CREATE TABLE users (
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
+  phone_number TEXT UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -123,7 +124,77 @@ git push -u origin main
 
 ---
 
-## Langkah 5: Install Netlify Plugin
+---
+
+## Setup WhatsApp Bot (Fonnte API)
+
+Bot WhatsApp menggunakan **Fonnte** sebagai gateway. Fonnte akan meneruskan pesan dari nomor bot ke webhook aplikasi.
+
+### 6.1 Daftar & Setup Akun Fonnte
+
+1. Buka https://fonnte.com dan daftar akun
+2. Masuk ke dashboard Fonnte
+3. Beli nomor WhatsApp bot atau hubungkan nomor WhatsApp pribadi melalui **"Device"** di sidebar
+4. Scan QR Code yang muncul menggunakan WhatsApp HP → **Perangkat Tertaut** → **Tautkan Perangkat**
+5. Setelah terhubung, status device akan berubah menjadi **"Connected"**
+
+### 6.2 Ambil API Token
+
+1. Di dashboard Fonnte, klik menu **"Device"**
+2. Klik device yang sudah terhubung
+3. Salin **"Token"** (string panjang) — ini untuk environment variable `FONNTE_TOKEN`
+
+### 6.3 Set Webhook di Fonnte
+
+Setiap kali ada pesan masuk, Fonnte perlu tahu harus dikirim ke mana.
+
+1. Di dashboard Fonnte, klik menu **"Webhook"**
+2. Pada field **"Endpoint URL"**, isi dengan:
+   ```
+   https://domain-anda.netlify.app/api/whatsapp/webhook
+   ```
+   > Ganti `domain-anda.netlify.app` dengan URL Netlify kamu
+   
+3. Pilih metode **"POST"**
+4. Klik **"Save"**
+
+### 6.4 Test Webhook (Verifikasi)
+
+1. Di halaman webhook Fonnte, klik **"Send Test"**
+2. Aplikasi harus merespon dengan `OK`
+
+### 6.5 Tambahkan Environment Variable
+
+Tambahkan ke `.env.local` (development) dan Netlify env vars (production):
+
+```env
+# Fonnte WhatsApp Gateway
+FONNTE_TOKEN=5Twsj1YU5xqNAVTbV18c
+WHATSAPP_BOT_NUMBER=6281818655223
+```
+
+- `FONNTE_TOKEN` → Token dari dashboard Fonnte (langkah 6.2)
+- `WHATSAPP_BOT_NUMBER` → Nomor WhatsApp bot (opsional, untuk tampilan di halaman status)
+
+### 6.6 Cara Kerja
+
+```
+User WA → kirim "Beli kopi 25rb" ke nomor Bot
+    ↓
+Fonnte terima → kirim POST ke webhook `/api/whatsapp/webhook`
+    ↓
+Aplikasi cari/auto-create user berdasarkan nomor HP pengirim
+    ↓
+AI (Gemini/Groq) parse pesan → simpan transaksi ke database
+    ↓
+Kirim balasan konfirmasi via Fonnte API → user dapat reply di WA
+```
+
+**Tidak perlu pairing/daftar OTP.** Cukup daftar di web dengan nomor WA, lalu kirim pesan ke nomor bot.
+
+---
+
+## Langkah 7: Install Netlify Plugin
 
 Install plugin Next.js untuk Netlify:
 

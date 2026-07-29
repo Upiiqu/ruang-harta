@@ -24,5 +24,6 @@ export interface User {
   name: string;
   email: string;
   password_hash: string;
+  phone_number?: string;
   created_at: string;
 }

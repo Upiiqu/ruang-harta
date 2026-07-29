@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { generatePairingCode } from '@/lib/whatsapp/pairing';
 import { supabase } from '@/lib/supabase';
 
-// Helper to check user-id header from auth middleware
 function getUserId(request: Request): string | null {
   return request.headers.get('x-user-id');
 }
@@ -14,25 +12,20 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Check if user already has linked phone number in Supabase
     const { data: user } = await supabase
       .from('users')
       .select('phone_number')
       .eq('id', userId)
       .maybeSingle();
 
-    const pairingCode = generatePairingCode(userId);
-
     return NextResponse.json({
       success: true,
       phoneNumber: user?.phone_number || null,
       isPaired: !!user?.phone_number,
-      pairingCode,
-      expiresInMinutes: 15,
     });
   } catch (error: any) {
-    console.error('Pairing API Error:', error);
-    return NextResponse.json({ error: 'Gagal mengambil data pairing' }, { status: 500 });
+    console.error('Error fetching phone:', error);
+    return NextResponse.json({ error: 'Gagal mengambil data' }, { status: 500 });
   }
 }
 
@@ -43,20 +36,20 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { action } = await request.json();
+    const { action, phoneNumber } = await request.json();
+
+    if (action === 'link' && phoneNumber) {
+      const cleanPhone = String(phoneNumber).replace(/[^0-9]/g, '');
+      await supabase.from('users').update({ phone_number: cleanPhone }).eq('id', userId);
+      return NextResponse.json({ success: true, message: 'Nomor berhasil ditautkan.' });
+    }
 
     if (action === 'unlink') {
-      await supabase
-        .from('users')
-        .update({ phone_number: null })
-        .eq('id', userId);
-
+      await supabase.from('users').update({ phone_number: null }).eq('id', userId);
       return NextResponse.json({ success: true, message: 'Nomor WhatsApp berhasil dilepas.' });
     }
 
-    // Generate fresh code
-    const code = generatePairingCode(userId);
-    return NextResponse.json({ success: true, pairingCode: code });
+    return NextResponse.json({ success: true, phoneNumber: null });
   } catch (error: any) {
     console.error('Pairing POST error:', error);
     return NextResponse.json({ error: 'Gagal memproses permintaan' }, { status: 500 });

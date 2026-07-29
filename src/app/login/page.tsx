@@ -35,6 +35,9 @@ export default function LoginPage() {
       if (data.name) {
         localStorage.setItem('ruang_harta_user_name', data.name);
       }
+      if (data.phoneNumber) {
+        localStorage.setItem('ruang_harta_phone', data.phoneNumber);
+      }
       router.push("/");
       router.refresh();
     } catch {

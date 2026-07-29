@@ -24,7 +24,7 @@ function setCookieOptions(response: NextResponse, token: string, maxAge: number)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, name, email, password, secretCode } = body;
+    const { action, name, email, password, secretCode, phoneNumber } = body;
 
     // --- Basic input validation ---
     if (!action || typeof action !== 'string') {
@@ -79,11 +79,24 @@ export async function POST(request: Request) {
       // Hash password
       const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-      // Insert new user
+      const cleanPhone = phoneNumber ? String(phoneNumber).replace(/[^0-9]/g, '') : null;
+
+      if (cleanPhone) {
+        const { data: phoneOwner } = await supabase.from('users').select('id').eq('phone_number', cleanPhone).maybeSingle();
+        if (phoneOwner) {
+          return NextResponse.json({ error: 'Nomor WhatsApp sudah terdaftar oleh akun lain.' }, { status: 409 });
+        }
+      }
+
       const { data: newUser, error: insertError } = await supabase
         .from('users')
-        .insert({ name: name.trim(), email: email.toLowerCase(), password_hash: passwordHash })
-        .select('id, name, email')
+        .insert({
+          name: name.trim(),
+          email: email.toLowerCase(),
+          password_hash: passwordHash,
+          phone_number: cleanPhone,
+        })
+        .select('id, name, email, phone_number')
         .single();
 
       if (insertError || !newUser) {
@@ -93,7 +106,7 @@ export async function POST(request: Request) {
 
       // Create JWT and set cookie
       const token = await createToken({ userId: newUser.id, email: newUser.email, name: newUser.name });
-      const response = NextResponse.json({ success: true, name: newUser.name });
+      const response = NextResponse.json({ success: true, name: newUser.name, phoneNumber: newUser.phone_number });
       setCookieOptions(response, token, COOKIE_MAX_AGE);
       return response;
     }
@@ -113,7 +126,7 @@ export async function POST(request: Request) {
       // Find user by email
       const { data: user, error: fetchError } = await supabase
         .from('users')
-        .select('id, name, email, password_hash')
+        .select('id, name, email, password_hash, phone_number')
         .eq('email', email.toLowerCase())
         .single<User>();
 
@@ -130,7 +143,7 @@ export async function POST(request: Request) {
 
       // Create JWT and set cookie
       const token = await createToken({ userId: user.id, email: user.email, name: user.name });
-      const response = NextResponse.json({ success: true, name: user.name });
+      const response = NextResponse.json({ success: true, name: user.name, phoneNumber: user.phone_number });
       setCookieOptions(response, token, COOKIE_MAX_AGE);
       return response;
     }
