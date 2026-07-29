@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { findOrCreateUserByPhone } from '@/lib/whatsapp/pairing';
 import { parseTransactionText, parseTransactionAudio, parseTransactionImage } from '@/lib/whatsapp/parser';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { isSafeUrl } from '@/lib/url-validation';
 import crypto from 'crypto';
 
