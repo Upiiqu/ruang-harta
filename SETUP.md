@@ -169,8 +169,8 @@ Tambahkan ke `.env.local` (development) dan Netlify env vars (production):
 
 ```env
 # Fonnte WhatsApp Gateway
-FONNTE_TOKEN=5Twsj1YU5xqNAVTbV18c
-WHATSAPP_BOT_NUMBER=6281818655223
+FONNTE_TOKEN=isi_dengan_tokenmu
+WHATSAPP_BOT_NUMBER=isi_dengan_nomormu
 ```
 
 - `FONNTE_TOKEN` → Token dari dashboard Fonnte (langkah 6.2)

@@ -40,6 +40,20 @@ export async function POST(request: Request) {
 
     if (action === 'link' && phoneNumber) {
       const cleanPhone = String(phoneNumber).replace(/[^0-9]/g, '');
+
+      const { data: dupUsers } = await supabase
+        .from('users')
+        .select('id')
+        .eq('phone_number', cleanPhone)
+        .neq('id', userId)
+        .limit(1);
+
+      if (dupUsers && dupUsers.length > 0) {
+        const dupId = dupUsers[0].id;
+        await supabase.from('transactions').update({ user_id: userId }).eq('user_id', dupId);
+        await supabase.from('users').delete().eq('id', dupId);
+      }
+
       await supabase.from('users').update({ phone_number: cleanPhone }).eq('id', userId);
       return NextResponse.json({ success: true, message: 'Nomor berhasil ditautkan.' });
     }
