@@ -91,6 +91,10 @@ export default function LoginPage() {
           <button type="submit" className="btn btn-primary" disabled={isLoading} style={{ marginTop: 'var(--space-4)', padding: '12px', display: 'flex', justifyContent: 'center', fontSize: '1rem' }}>
             <LogIn size={18} /> {isLoading ? 'Memproses...' : 'Masuk Sekarang'}
           </button>
+
+          <Link href="/lupa-password" style={{ color: 'var(--color-text-muted)', textDecoration: 'none', fontSize: '0.875rem', textAlign: 'center', marginTop: 'var(--space-2)' }}>
+            Lupa Password?
+          </Link>
         </form>
 
         <div style={{ marginTop: 'var(--space-8)', textAlign: 'center', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-6)' }}>

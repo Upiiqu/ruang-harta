@@ -149,6 +149,43 @@ export async function POST(request: Request) {
     }
 
     // ─────────────────────────────────────────
+    // RESET PASSWORD
+    // ─────────────────────────────────────────
+    if (action === 'reset-password') {
+      if (!email || !password || !secretCode) {
+        return NextResponse.json({ error: 'Email, password baru, dan kode akses wajib diisi.' }, { status: 400 });
+      }
+
+      if (!SIGNUP_SECRET || secretCode.toString().toUpperCase() !== SIGNUP_SECRET.toUpperCase()) {
+        return NextResponse.json({ error: 'Kode akses salah. Anda tidak memiliki izin untuk mereset password.' }, { status: 403 });
+      }
+
+      const passwordErrors: string[] = [];
+      if (password.length < 8) passwordErrors.push('minimal 8 karakter');
+      if (!/[A-Z]/.test(password)) passwordErrors.push('huruf besar');
+      if (!/[a-z]/.test(password)) passwordErrors.push('huruf kecil');
+      if (!/[0-9]/.test(password)) passwordErrors.push('angka');
+      if (passwordErrors.length > 0) {
+        return NextResponse.json({ error: `Password harus mengandung: ${passwordErrors.join(', ')}.` }, { status: 400 });
+      }
+
+      const { data: user } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email.toLowerCase())
+        .single();
+
+      if (!user) {
+        return NextResponse.json({ error: 'Email tidak ditemukan.' }, { status: 404 });
+      }
+
+      const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      await supabase.from('users').update({ password_hash: passwordHash }).eq('id', user.id);
+
+      return NextResponse.json({ success: true, message: 'Password berhasil direset. Silakan login.' });
+    }
+
+    // ─────────────────────────────────────────
     // LOGOUT
     // ─────────────────────────────────────────
     if (action === 'logout') {
