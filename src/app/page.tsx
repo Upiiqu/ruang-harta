@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ArrowUpRight, ArrowDownRight, CreditCard, Sparkles, Plus, Camera, Wallet, X, Check, TrendingUp, TrendingDown, Activity, Eye, EyeOff } from 'lucide-react';
+import { syncTransactionsToServer } from '@/lib/sync';
 
 const data = [
   { name: 'Jan', balance: 4000, expenses: 2400 },
@@ -167,6 +168,7 @@ export default function Home() {
     localStorage.setItem('ruang_harta_transactions', JSON.stringify(transactions));
     
     setScanResult(null);
+    syncTransactionsToServer();
     router.push('/transaksi');
   };
 
@@ -223,6 +225,7 @@ export default function Home() {
     localStorage.setItem('ruang_harta_transactions', JSON.stringify(transactions));
     
     setIncomeResult(null);
+    syncTransactionsToServer();
     router.push('/transaksi');
   };
 
@@ -277,6 +280,7 @@ export default function Home() {
     localStorage.setItem('ruang_harta_transactions', JSON.stringify(transactions));
     
     setDebtResult(null);
+    syncTransactionsToServer();
     router.push('/transaksi');
   };
 

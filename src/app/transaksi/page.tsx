@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { ReceiptText, Trash2, ChevronDown, ChevronUp, Pencil, Check, X, Upload, RefreshCw } from 'lucide-react';
+import { syncTransactionsToServer, deleteTransactionFromServer } from '@/lib/sync';
 
 export default function TransaksiPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -82,17 +83,7 @@ export default function TransaksiPage() {
       const updated = transactions.filter(t => t.id !== id);
       setTransactions(updated);
       localStorage.setItem('ruang_harta_transactions', JSON.stringify(updated));
-
-      // Attempt to delete from Supabase if it's synced
-      try {
-        await fetch('/api/transactions/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'delete', transactionId: id })
-        });
-      } catch (err) {
-        console.warn('Supabase delete fallback:', err);
-      }
+    deleteTransactionFromServer(id);
     }
   };
 
@@ -119,6 +110,7 @@ export default function TransaksiPage() {
     );
     setTransactions(updated);
     localStorage.setItem('ruang_harta_transactions', JSON.stringify(updated));
+    syncTransactionsToServer();
     setEditingId(null);
     setEditForm({});
   };
