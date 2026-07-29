@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { findOrCreateUserByPhone } from '@/lib/whatsapp/pairing';
 import { parseTransactionText, parseTransactionAudio, parseTransactionImage } from '@/lib/whatsapp/parser';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { getUserFamily } from '@/lib/family';
 import { isSafeUrl } from '@/lib/url-validation';
 import crypto from 'crypto';
 
@@ -98,8 +99,13 @@ export async function POST(request: Request) {
     }
 
     try {
+      // Look up family_id so WhatsApp transactions appear in family-scoped queries
+      const familyInfo = user.id ? await getUserFamily(user.id) : null;
+      const familyId = familyInfo?.family.id || null;
+
       await supabase.from('transactions').insert({
         user_id: user.id,
+        family_id: familyId,
         type: parsed.type,
         amount: parsed.amount,
         category: parsed.category,

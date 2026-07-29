@@ -5,7 +5,7 @@ export async function syncTransactionsToServer() {
     const res = await fetch('/api/transactions/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save-all', transactions: txs }),
+      body: JSON.stringify({ action: 'replace-all', transactions: txs }),
     });
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));

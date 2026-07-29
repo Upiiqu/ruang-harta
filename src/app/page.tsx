@@ -82,29 +82,79 @@ export default function Home() {
       try {
         const res = await fetch('/api/transactions/sync');
         const data = await res.json();
-        if (data.success && data.transactions?.length > 0) {
-          let modified = false;
-          const currentTxs = loadLocalTransactions() || [];
+        const serverTxs = (data.success && data.transactions) ? data.transactions : [];
+        const localTxs = loadLocalTransactions() || [];
 
-          data.transactions.forEach((tx: any) => {
-            if (!currentTxs.find((lt: any) => lt.id === tx.id)) {
-              currentTxs.push({
-                id: tx.id,
+        // Build a map keyed by id for efficient lookup
+        const mergedMap = new Map<string, any>();
+
+        // Start with local transactions
+        localTxs.forEach((tx: any) => {
+          if (tx.id) mergedMap.set(tx.id, tx);
+        });
+
+        // Merge server transactions — server is source of truth for known IDs
+        let modified = false;
+        serverTxs.forEach((tx: any) => {
+          const existing = mergedMap.get(tx.id);
+          if (!existing) {
+            // New from server — add to local
+            mergedMap.set(tx.id, {
+              id: tx.id,
+              type: tx.type,
+              amount: tx.amount,
+              category: tx.category,
+              description: tx.description,
+              date: tx.date || new Date().toISOString().split('T')[0],
+              storeName: tx.store_name,
+              items: tx.items,
+            });
+            modified = true;
+          } else {
+            // Update local with server values if different (server wins)
+            const serverAmount = Number(tx.amount) || 0;
+            const localAmount = Number(existing.amount) || 0;
+            if (
+              existing.type !== tx.type ||
+              localAmount !== serverAmount ||
+              existing.category !== tx.category ||
+              existing.description !== tx.description ||
+              existing.date !== tx.date
+            ) {
+              mergedMap.set(tx.id, {
+                ...existing,
                 type: tx.type,
                 amount: tx.amount,
                 category: tx.category,
                 description: tx.description,
-                date: tx.date || new Date().toISOString().split('T')[0]
+                date: tx.date || existing.date,
+                storeName: tx.store_name || existing.storeName,
+                items: tx.items || existing.items,
               });
               modified = true;
             }
-          });
-
-          if (modified) {
-            currentTxs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            localStorage.setItem('ruang_harta_transactions', JSON.stringify(currentTxs));
-            calculateBalance(currentTxs);
           }
+        });
+
+        // Check for local-only transactions to push to server
+        const serverIds = new Set(serverTxs.map((t: any) => t.id));
+        const unsynced = localTxs.filter((t: any) => t.id && !serverIds.has(t.id));
+
+        const merged = Array.from(mergedMap.values());
+        merged.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        if (modified || unsynced.length > 0) {
+          localStorage.setItem('ruang_harta_transactions', JSON.stringify(merged));
+          calculateBalance(merged);
+        }
+
+        // Push unsynced local transactions to server
+        if (unsynced.length > 0) {
+          await fetch('/api/transactions/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'save-all', transactions: merged }),
+          });
         }
       } catch (err) {
         console.error('Sync err:', err);

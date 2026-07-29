@@ -23,41 +23,77 @@ export default function TransaksiPage() {
         Promise.resolve(loadLocal()),
       ]);
 
-      if (syncRes.success && syncRes.transactions?.length > 0) {
-        let modified = false;
-        const merged = [...localTxs];
+      const serverTxs = (syncRes.success && syncRes.transactions) ? syncRes.transactions : [];
 
-        syncRes.transactions.forEach((tx: any) => {
-          if (!merged.find((lt: any) => lt.id === tx.id)) {
-            merged.push({
-              id: tx.id,
+      // Build a map keyed by id for efficient lookup
+      const mergedMap = new Map<string, any>();
+
+      // Start with local transactions
+      localTxs.forEach((tx: any) => {
+        if (tx.id) mergedMap.set(tx.id, tx);
+      });
+
+      // Merge server transactions — server is source of truth for known IDs
+      let modified = false;
+      serverTxs.forEach((tx: any) => {
+        const existing = mergedMap.get(tx.id);
+        if (!existing) {
+          // New from server
+          mergedMap.set(tx.id, {
+            id: tx.id,
+            type: tx.type,
+            amount: tx.amount,
+            category: tx.category,
+            description: tx.description,
+            date: tx.date || new Date().toISOString().split('T')[0],
+            storeName: tx.store_name,
+            items: tx.items,
+          });
+          modified = true;
+        } else {
+          // Update local with server values if different (server wins)
+          const serverAmount = Number(tx.amount) || 0;
+          const localAmount = Number(existing.amount) || 0;
+          if (
+            existing.type !== tx.type ||
+            localAmount !== serverAmount ||
+            existing.category !== tx.category ||
+            existing.description !== tx.description ||
+            existing.date !== tx.date
+          ) {
+            mergedMap.set(tx.id, {
+              ...existing,
               type: tx.type,
               amount: tx.amount,
               category: tx.category,
               description: tx.description,
-              date: tx.date || new Date().toISOString().split('T')[0],
-              storeName: tx.store_name,
-              items: tx.items,
+              date: tx.date || existing.date,
+              storeName: tx.store_name || existing.storeName,
+              items: tx.items || existing.items,
             });
             modified = true;
           }
-        });
-
-        if (modified) {
-          merged.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          localStorage.setItem('ruang_harta_transactions', JSON.stringify(merged));
-          setTransactions(merged);
         }
+      });
+
+      // Check for local-only transactions to push to server
+      const serverIds = new Set(serverTxs.map((t: any) => t.id));
+      const unsynced = localTxs.filter((t: any) => t.id && !serverIds.has(t.id));
+
+      const merged = Array.from(mergedMap.values());
+      merged.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      if (modified || unsynced.length > 0) {
+        localStorage.setItem('ruang_harta_transactions', JSON.stringify(merged));
+        setTransactions(merged);
       }
 
-      const updatedLocal = loadLocal();
-      const serverIds = new Set((syncRes.transactions || []).map((t: any) => t.id));
-      const unsynced = updatedLocal.filter((t: any) => !serverIds.has(t.id));
+      // Push unsynced local transactions to server
       if (unsynced.length > 0) {
         await fetch('/api/transactions/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'save-all', transactions: updatedLocal }),
+          body: JSON.stringify({ action: 'save-all', transactions: merged }),
         });
       }
     } catch (err) {
