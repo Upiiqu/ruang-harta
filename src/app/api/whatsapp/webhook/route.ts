@@ -103,17 +103,35 @@ export async function POST(request: Request) {
       const familyInfo = user.id ? await getUserFamily(user.id) : null;
       const familyId = familyInfo?.family.id || null;
 
-      await supabase.from('transactions').insert({
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        family_id: familyId,
-        type: parsed.type,
-        amount: parsed.amount,
-        category: parsed.category,
-        description: parsed.description,
-        date: parsed.date,
-        source: 'whatsapp',
-      });
+      // Deduplication check: Did this user create an identical transaction in the last 2 minutes?
+      // This prevents Fonnte webhook retry loops when AI processing takes longer than their timeout.
+      const twoMinutesAgo = new Date(Date.now() - 120000).toISOString();
+      const { data: existingRecent } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('amount', parsed.amount)
+        .eq('description', parsed.description)
+        .eq('type', parsed.type)
+        .eq('source', 'whatsapp')
+        .gte('created_at', twoMinutesAgo)
+        .limit(1);
+
+      if (!existingRecent || existingRecent.length === 0) {
+        await supabase.from('transactions').insert({
+          id: crypto.randomUUID(),
+          user_id: user.id,
+          family_id: familyId,
+          type: parsed.type,
+          amount: parsed.amount,
+          category: parsed.category,
+          description: parsed.description,
+          date: parsed.date,
+          source: 'whatsapp',
+        });
+      } else {
+        console.log('⚠️ Webhook duplicate detected, ignoring insert to prevent retry loop.');
+      }
     } catch (dbErr) {
       console.warn('Database insert warning:', dbErr);
     }
