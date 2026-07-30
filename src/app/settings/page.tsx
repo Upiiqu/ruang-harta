@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Settings, Phone, Check, X, RefreshCw, MessageSquare, User } from 'lucide-react';
+import { Settings, Phone, Check, X, RefreshCw, MessageSquare, User, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SettingsPage() {
@@ -11,10 +11,18 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  
+  const [cycleDate, setCycleDate] = useState('1');
+  const [savedCycleDate, setSavedCycleDate] = useState('1');
+  const [cycleMessage, setCycleMessage] = useState('');
 
   useEffect(() => {
     const name = localStorage.getItem('ruang_harta_user_name') || '';
     setUserName(name);
+
+    const cDate = localStorage.getItem('ruang_harta_cycle_date') || '1';
+    setCycleDate(cDate);
+    setSavedCycleDate(cDate);
 
     fetch('/api/whatsapp/pairing')
       .then(res => res.json())
@@ -76,6 +84,19 @@ export default function SettingsPage() {
       setMessage('Gagal menghapus.');
     }
     setSaving(false);
+    setSaving(false);
+  };
+
+  const handleSaveCycle = () => {
+    const num = parseInt(cycleDate);
+    if (isNaN(num) || num < 1 || num > 31) {
+      setCycleMessage('Tanggal harus antara 1 sampai 31.');
+      return;
+    }
+    localStorage.setItem('ruang_harta_cycle_date', num.toString());
+    setSavedCycleDate(num.toString());
+    setCycleMessage('Tanggal gajian berhasil disimpan!');
+    setTimeout(() => setCycleMessage(''), 3000);
   };
 
   return (
@@ -101,6 +122,52 @@ export default function SettingsPage() {
             <span className="font-medium">{userName}</span>
           </div>
         )}
+      </div>
+
+      {/* Financial Cycle Card */}
+      <div className="glass-panel" style={{ padding: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
+        <div className="flex items-center gap-3" style={{ marginBottom: 'var(--space-4)' }}>
+          <CalendarDays size={20} color="var(--color-accent)" />
+          <div>
+            <h3>Siklus Keuangan</h3>
+            <p className="text-sm text-muted" style={{ marginTop: '2px' }}>Tentukan tanggal gajian Anda untuk perhitungan sisa uang bulan ini.</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-sm text-muted" style={{ display: 'block', marginBottom: 'var(--space-2)' }}>
+              Tanggal Gajian / Awal Siklus (1 - 31)
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min="1"
+                max="31"
+                className="input-field"
+                placeholder="1"
+                value={cycleDate}
+                onChange={e => setCycleDate(e.target.value)}
+                style={{ width: '100px' }}
+              />
+              <button className="btn btn-primary flex items-center gap-2" onClick={handleSaveCycle} disabled={cycleDate === savedCycleDate}>
+                <Check size={16} />
+                Simpan
+              </button>
+            </div>
+          </div>
+
+          {cycleMessage && (
+            <p className="text-sm" style={{ color: cycleMessage.includes('harus') ? 'var(--color-danger)' : 'var(--color-success)' }}>
+              {cycleMessage}
+            </p>
+          )}
+          
+          <div className="flex items-center gap-2 text-xs text-muted" style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-paper-2)', borderRadius: 'var(--radius-md)' }}>
+            <CalendarDays size={14} />
+            <span>Misal: Jika diisi 25, maka Pemasukan/Pengeluaran "Bulan Ini" di Dashboard akan dihitung dari tanggal 25 hingga tanggal 24 bulan depan.</span>
+          </div>
+        </div>
       </div>
 
       {/* WhatsApp Number Card */}

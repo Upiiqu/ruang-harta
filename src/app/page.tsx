@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, CreditCard, Sparkles, Plus, Camera, Wallet, X, Check, TrendingUp, TrendingDown, Activity, Eye, EyeOff, MessageSquare } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, CreditCard, Sparkles, Plus, Camera, Wallet, X, Check, TrendingUp, TrendingDown, Activity, Eye, EyeOff, MessageSquare, CalendarDays } from 'lucide-react';
 import { syncTransactionsToServer } from '@/lib/sync';
 
 const data = [
@@ -42,6 +42,7 @@ export default function Home() {
   
   const [userName, setUserName] = useState("");
   const [greeting, setGreeting] = useState("Dashboard");
+  const [cycleText, setCycleText] = useState("");
 
   useEffect(() => {
     // Check saved hide balance preference
@@ -61,13 +62,59 @@ export default function Home() {
     setGreeting(`${timeGreeting}${name ? `, ${name}` : ''}`);
 
     const calculateBalance = (txs: any[]) => {
-      let inc = 0, exp = 0, debt = 0;
+      const cycleDateStr = localStorage.getItem('ruang_harta_cycle_date') || '1';
+      const cycleDate = parseInt(cycleDateStr) || 1;
+      
+      const now = new Date();
+      const currentDay = now.getDate();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      let start, end;
+      
+      if (currentDay >= cycleDate) {
+        start = new Date(currentYear, currentMonth, cycleDate);
+        end = new Date(currentYear, currentMonth + 1, cycleDate - 1);
+      } else {
+        start = new Date(currentYear, currentMonth - 1, cycleDate);
+        end = new Date(currentYear, currentMonth, cycleDate - 1);
+      }
+      
+      // Update UI Text for Cycle
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
+      if (cycleDate === 1) {
+        setCycleText(`Bulan Ini (${monthNames[currentMonth]} ${currentYear})`);
+      } else {
+        setCycleText(`Siklus: ${start.getDate()} ${monthNames[start.getMonth()]} - ${end.getDate()} ${monthNames[end.getMonth()]}`);
+      }
+
+      let totalInc = 0, totalExp = 0, totalDebt = 0;
+      let cycleInc = 0, cycleExp = 0, cycleDebt = 0;
+      
+      // Start of day and End of day to be safe with timezones
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+
       txs.forEach((t: any) => {
-        if (t.type === 'income') inc += Number(t.amount) || 0;
-        else if (t.type === 'expense') exp += Number(t.amount) || 0;
-        else if (t.type === 'debt') debt += Number(t.amount) || 0;
+        const amt = Number(t.amount) || 0;
+        const txDate = new Date(t.date);
+        const inCycle = txDate >= start && txDate <= end;
+        
+        if (t.type === 'income') {
+          totalInc += amt;
+          if (inCycle) cycleInc += amt;
+        }
+        else if (t.type === 'expense') {
+          totalExp += amt;
+          if (inCycle) cycleExp += amt;
+        }
+        else if (t.type === 'debt') {
+          totalDebt += amt;
+          if (inCycle) cycleDebt += amt;
+        }
       });
-      setBalanceInfo({ total: inc - exp - debt, income: inc, expense: exp, debt });
+      
+      setBalanceInfo({ total: totalInc - totalExp - totalDebt, income: cycleInc, expense: cycleExp, debt: cycleDebt });
     };
 
     const loadLocalTransactions = () => {
@@ -403,6 +450,12 @@ export default function Home() {
         <div>
           <h1 style={{ marginBottom: 'var(--space-2)' }}>{greeting}</h1>
           <p className="text-muted">Pantau dan kelola kekayaan Anda secara cerdas.</p>
+          {cycleText && (
+            <div className="badge badge-secondary" style={{ marginTop: 'var(--space-2)' }}>
+              <CalendarDays size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom' }} />
+              {cycleText}
+            </div>
+          )}
         </div>
         
         <div className="flex items-center gap-4">
