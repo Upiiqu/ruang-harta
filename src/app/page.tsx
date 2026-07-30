@@ -707,6 +707,26 @@ export default function Home() {
               </div>
             ) : incomeResult && incomeResult.incomes ? (
               <div className="flex flex-col gap-4">
+                
+                {/* AI Advice Banner */}
+                {(() => {
+                  const totalSelected = incomeResult.incomes.filter((i: any) => i.selected).reduce((acc: number, curr: any) => acc + (Number(curr.totalAmount) || 0), 0);
+                  if (totalSelected > 0) {
+                    const saveTarget = totalSelected * 0.2; // 20% recommendation
+                    return (
+                      <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: 'var(--space-4)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-accent)' }}>
+                        <p className="text-sm font-medium flex items-start gap-2" style={{ color: 'var(--color-accent)', lineHeight: 1.5 }}>
+                          <Sparkles size={16} style={{ marginTop: '2px', flexShrink: 0 }} />
+                          <span>
+                            <strong>Saran AI:</strong> Ada baiknya Anda menyisihkan 20% dari pemasukan ini (sekitar <strong>Rp {saveTarget.toLocaleString('id-ID')}</strong>) ke Tabungan/Investasi untuk mencapai target finansial Anda.
+                          </span>
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
                 {/* Select all & summary bar */}
                 <div className="flex items-center justify-between" style={{ backgroundColor: 'var(--color-paper-2)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
                   <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
