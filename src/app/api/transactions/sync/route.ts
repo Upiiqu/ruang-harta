@@ -51,7 +51,7 @@ function sanitizeTransaction(tx: any, userId: string, familyId: string | null): 
     safe.id = String(tx.id);
   }
 
-  const ALLOWED_FIELDS = ['type', 'amount', 'category', 'description', 'date', 'items', 'storeName', 'store_name'] as const;
+  const ALLOWED_FIELDS = ['type', 'amount', 'category', 'description', 'date', 'storeName', 'store_name'] as const;
 
   for (const field of ALLOWED_FIELDS) {
     const val = tx[field] ?? tx[field.replace(/_([a-z])/g, (_: string, c: string) => c.toUpperCase())] ?? null;
@@ -61,10 +61,8 @@ function sanitizeTransaction(tx: any, userId: string, familyId: string | null): 
       else if (field === 'category') safe.category = String(val).slice(0, 100);
       else if (field === 'description' || field === 'storeName' || field === 'store_name') {
         safe.description = safe.description || String(val).slice(0, 500);
-        if (field === 'store_name' || field === 'storeName') safe.store_name = String(val).slice(0, 100);
       }
       else if (field === 'date') safe.date = String(val).slice(0, 10);
-      else if (field === 'items') safe.items = typeof val === 'object' ? val : null;
     }
   }
   return safe;

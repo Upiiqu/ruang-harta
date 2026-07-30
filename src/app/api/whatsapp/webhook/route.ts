@@ -104,6 +104,7 @@ export async function POST(request: Request) {
       const familyId = familyInfo?.family.id || null;
 
       await supabase.from('transactions').insert({
+        id: crypto.randomUUID(),
         user_id: user.id,
         family_id: familyId,
         type: parsed.type,
