@@ -45,8 +45,12 @@ export default function TransaksiPage() {
       const unsynced: any[] = [];
       localTxs.forEach((tx: any) => {
         if (tx.id && !serverMap.has(tx.id)) {
-          unsynced.push(tx);
-          serverMap.set(tx.id, tx); // include in merged for now
+          // Only push if it was created locally less than 1 hour ago
+          const isRecent = tx._localCreatedAt && (Date.now() - tx._localCreatedAt < 3600000);
+          if (isRecent) {
+            unsynced.push(tx);
+            serverMap.set(tx.id, tx); // include in merged for now
+          }
         }
       });
 

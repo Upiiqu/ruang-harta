@@ -105,8 +105,12 @@ export default function Home() {
         const unsynced: any[] = [];
         localTxs.forEach((tx: any) => {
           if (tx.id && !serverMap.has(tx.id)) {
-            unsynced.push(tx);
-            serverMap.set(tx.id, tx); // include in merged for now
+            // Only push if it was created locally less than 1 hour ago
+            const isRecent = tx._localCreatedAt && (Date.now() - tx._localCreatedAt < 3600000);
+            if (isRecent) {
+              unsynced.push(tx);
+              serverMap.set(tx.id, tx); // include in merged for now
+            }
           }
         });
 
@@ -190,7 +194,8 @@ export default function Home() {
       storeName: scanResult.storeName || 'Toko Tidak Diketahui',
       amount: scanResult.totalAmount || 0,
       items: scanResult.items || [],
-      type: 'expense'
+      type: 'expense',
+      _localCreatedAt: Date.now()
     };
     
     transactions.unshift(newTx);
@@ -247,7 +252,8 @@ export default function Home() {
       amount: item.totalAmount || 0,
       category: item.category || 'Transfer Masuk',
       items: [],
-      type: 'income'
+      type: 'income',
+      _localCreatedAt: Date.now()
     }));
     
     transactions = [...newTxs, ...transactions];
@@ -302,7 +308,8 @@ export default function Home() {
       storeName: debtResult.creditorName || 'Tagihan Hutang',
       amount: debtResult.installmentAmount || 0,
       items: [],
-      type: 'debt'
+      type: 'debt',
+      _localCreatedAt: Date.now()
     };
     
     transactions.unshift(newTx);
