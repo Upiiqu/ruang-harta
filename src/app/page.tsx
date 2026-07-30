@@ -63,7 +63,7 @@ export default function Home() {
         else if (t.type === 'expense') exp += Number(t.amount) || 0;
         else if (t.type === 'debt') debt += Number(t.amount) || 0;
       });
-      setBalanceInfo({ total: inc - exp, income: inc, expense: exp, debt });
+      setBalanceInfo({ total: inc - exp - debt, income: inc, expense: exp, debt });
     };
 
     const loadLocalTransactions = () => {
