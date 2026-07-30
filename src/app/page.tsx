@@ -244,6 +244,7 @@ export default function Home() {
       date: scanResult.date || new Date().toISOString().split('T')[0],
       storeName: scanResult.storeName || 'Toko Tidak Diketahui',
       amount: scanResult.totalAmount || 0,
+      category: scanResult.category || 'Umum',
       items: scanResult.items || [],
       type: 'expense',
       _localCreatedAt: Date.now()
@@ -358,6 +359,7 @@ export default function Home() {
       date: debtResult.date || new Date().toISOString().split('T')[0],
       storeName: debtResult.creditorName || 'Tagihan Hutang',
       amount: debtResult.installmentAmount || 0,
+      category: debtResult.category || 'Cicilan',
       items: [],
       type: 'debt',
       _localCreatedAt: Date.now()
