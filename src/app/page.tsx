@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, CreditCard, Sparkles, Plus, Camera, Wallet, X, Check, TrendingUp, TrendingDown, Activity, Eye, EyeOff } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, CreditCard, Sparkles, Plus, Camera, Wallet, X, Check, TrendingUp, TrendingDown, Activity, Eye, EyeOff, MessageSquare } from 'lucide-react';
 import { syncTransactionsToServer } from '@/lib/sync';
 
 const data = [
@@ -32,6 +32,10 @@ export default function Home() {
   const [isScanningDebt, setIsScanningDebt] = useState(false);
   const [debtResult, setDebtResult] = useState<any>(null);
   const [debtError, setDebtError] = useState("");
+  
+  const [isScanningText, setIsScanningText] = useState(false);
+  const [textInput, setTextInput] = useState("");
+  const [textError, setTextError] = useState("");
   
   const [balanceInfo, setBalanceInfo] = useState({ total: 0, income: 0, expense: 0, debt: 0 });
   const [hideBalance, setHideBalance] = useState(false);
@@ -320,6 +324,40 @@ export default function Home() {
     router.push('/transaksi');
   };
 
+  const handleScanText = async () => {
+    if (!textInput.trim()) return;
+    
+    setIsScanningText(true);
+    setTextError("");
+
+    try {
+      const res = await fetch('/api/scan-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textInput })
+      });
+      
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Gagal memproses teks");
+      
+      // Treat the returned result data based on its type and open the corresponding modal
+      setTextInput(""); // clear input
+      
+      if (result.data.type === 'expense') {
+        setScanResult(result.data);
+      } else if (result.data.type === 'income') {
+        setIncomeResult(result.data);
+      } else if (result.data.type === 'debt') {
+        setDebtResult(result.data);
+      }
+      
+    } catch (err: any) {
+      setTextError(err.message);
+    } finally {
+      setIsScanningText(false);
+    }
+  };
+
   const triggerAIAnalysis = async () => {
     setIsAnalyzing(true);
     setShowAIInsights(true);
@@ -368,6 +406,10 @@ export default function Home() {
         </div>
         
         <div className="flex items-center gap-4">
+          <button className="btn btn-secondary flex items-center gap-2" onClick={() => setIsScanningText(true)} disabled={isScanning || isScanningIncome || isScanningDebt}>
+            <MessageSquare size={16} />
+            Teks
+          </button>
           <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
             <Camera size={16} />
             Struk
@@ -464,6 +506,44 @@ export default function Home() {
         {/* Market Snapshot Panel */}
         <MarketSnapshot />
       </div>
+
+      {/* Text Input Modal Overlay */}
+      {isScanningText && !scanResult && !incomeResult && !debtResult && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
+          <div className="glass-panel" style={{ width: '90%', maxWidth: '500px', backgroundColor: 'var(--color-paper)', position: 'relative', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            
+            <div className="flex items-center justify-between">
+              <h3>Input Cepat (Teks)</h3>
+              <button className="btn btn-secondary" style={{ padding: '0 var(--space-2)' }} onClick={() => { setIsScanningText(false); setTextError(""); }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-muted">Ketik transaksi Anda seperti mengobrol. AI akan otomatis mengkategorikannya.</p>
+              <textarea 
+                className="input-field" 
+                rows={3}
+                placeholder="Contoh: Beli kopi kenangan 25 ribu pakai gopay"
+                value={textInput}
+                onChange={e => setTextInput(e.target.value)}
+                style={{ resize: 'none' }}
+              />
+              {textError && (
+                <p style={{ color: 'var(--color-danger)', fontSize: '0.875rem' }}>{textError}</p>
+              )}
+            </div>
+            
+            <div className="flex items-center justify-between" style={{ marginTop: 'var(--space-2)' }}>
+              <p className="text-xs text-muted flex items-center gap-1"><Sparkles size={12} color="var(--color-accent)" /> ✨ Diproses oleh AI</p>
+              <button className="btn btn-primary" onClick={handleScanText} disabled={!textInput.trim()}>
+                Proses
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
         {/* Scan Modal Overlay */}
       {(isScanning || scanResult || scanError) && (
