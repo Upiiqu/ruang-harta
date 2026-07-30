@@ -22,10 +22,7 @@
   --color-border: oklch(90% 0.01 250);
   --color-border-hover: oklch(80% 0.01 250);
   
-  /* Accent Hue: Pastel Blue */
-  --color-accent: oklch(65% 0.10 240);
-  --color-accent-hover: oklch(60% 0.10 240);
-  --color-accent-faint: oklch(95% 0.03 240);
+  /* Accent Hue is handled by [data-theme] below */
   
   /* Chart Color: Soft Lavender */
   --color-chart: oklch(55% 0.12 290);
@@ -56,6 +53,37 @@
   --radius-md: 6px;
   --radius-lg: 12px;
   --radius-full: 9999px;
+}
+
+/* Theme Varients */
+:root, [data-theme="ocean"] {
+  --color-accent: oklch(65% 0.10 240);
+  --color-accent-hover: oklch(60% 0.10 240);
+  --color-accent-faint: oklch(95% 0.03 240);
+}
+
+[data-theme="emerald"] {
+  --color-accent: oklch(65% 0.15 150);
+  --color-accent-hover: oklch(60% 0.15 150);
+  --color-accent-faint: oklch(95% 0.05 150);
+}
+
+[data-theme="sunset"] {
+  --color-accent: oklch(65% 0.15 45);
+  --color-accent-hover: oklch(60% 0.15 45);
+  --color-accent-faint: oklch(95% 0.05 45);
+}
+
+[data-theme="royal"] {
+  --color-accent: oklch(60% 0.15 300);
+  --color-accent-hover: oklch(55% 0.15 300);
+  --color-accent-faint: oklch(95% 0.05 300);
+}
+
+[data-theme="rose"] {
+  --color-accent: oklch(65% 0.15 350);
+  --color-accent-hover: oklch(60% 0.15 350);
+  --color-accent-faint: oklch(95% 0.05 350);
 }
 
 * {

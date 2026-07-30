@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Settings, Phone, Check, X, RefreshCw, MessageSquare, User, CalendarDays } from 'lucide-react';
+import { Settings, Phone, Check, X, RefreshCw, MessageSquare, User, CalendarDays, Palette } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SettingsPage() {
@@ -15,6 +15,16 @@ export default function SettingsPage() {
   const [cycleDate, setCycleDate] = useState('1');
   const [savedCycleDate, setSavedCycleDate] = useState('1');
   const [cycleMessage, setCycleMessage] = useState('');
+  
+  const [currentTheme, setCurrentTheme] = useState('ocean');
+
+  const themes = [
+    { id: 'ocean', name: 'Ocean', color: '#3b82f6' }, // Blue
+    { id: 'emerald', name: 'Emerald', color: '#10b981' }, // Green
+    { id: 'sunset', name: 'Sunset', color: '#f59e0b' }, // Orange
+    { id: 'royal', name: 'Royal', color: '#8b5cf6' }, // Purple
+    { id: 'rose', name: 'Rose', color: '#f43f5e' }, // Pink
+  ];
 
   useEffect(() => {
     const name = localStorage.getItem('ruang_harta_user_name') || '';
@@ -23,6 +33,9 @@ export default function SettingsPage() {
     const cDate = localStorage.getItem('ruang_harta_cycle_date') || '1';
     setCycleDate(cDate);
     setSavedCycleDate(cDate);
+    
+    const theme = localStorage.getItem('ruang_harta_theme') || 'ocean';
+    setCurrentTheme(theme);
 
     fetch('/api/whatsapp/pairing')
       .then(res => res.json())
@@ -99,6 +112,12 @@ export default function SettingsPage() {
     setTimeout(() => setCycleMessage(''), 3000);
   };
 
+  const handleThemeChange = (themeId: string) => {
+    setCurrentTheme(themeId);
+    localStorage.setItem('ruang_harta_theme', themeId);
+    document.documentElement.setAttribute('data-theme', themeId);
+  };
+
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
       <header style={{ marginBottom: 'var(--space-8)' }}>
@@ -108,6 +127,35 @@ export default function SettingsPage() {
         </h1>
         <p className="text-muted">Kelola profil dan koneksi WhatsApp kamu.</p>
       </header>
+
+      {/* Theme Selection Card */}
+      <div className="glass-panel" style={{ padding: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
+        <div className="flex items-center gap-3" style={{ marginBottom: 'var(--space-4)' }}>
+          <Palette size={20} color="var(--color-accent)" />
+          <h3>Tema Visual</h3>
+        </div>
+        
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted">Pilih warna yang paling sesuai dengan selera Anda.</p>
+          <div className="flex gap-4 flex-wrap">
+            {themes.map(t => (
+              <button 
+                key={t.id}
+                onClick={() => handleThemeChange(t.id)}
+                style={{ 
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+                  background: 'none', border: 'none', cursor: 'pointer', padding: '8px', borderRadius: '8px',
+                  backgroundColor: currentTheme === t.id ? 'var(--color-paper-2)' : 'transparent',
+                  outline: currentTheme === t.id ? '2px solid var(--color-accent)' : 'none'
+                }}
+              >
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: t.color, boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }} />
+                <span className="text-xs font-medium" style={{ color: currentTheme === t.id ? 'var(--color-accent)' : 'var(--color-text)' }}>{t.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Profile Card */}
       <div className="glass-panel" style={{ padding: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
