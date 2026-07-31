@@ -7,22 +7,22 @@ export async function GET() {
   try {
     const marketData: any = [];
 
-    // 1. Fetch BTC/USDT from Binance (100% Real-time, highly reliable)
+    // 1. Fetch BTC/IDR from CoinGecko (Works in Indonesia, unlike Binance)
     try {
-      const btcRes = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT');
+      const btcRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=idr&include_24hr_change=true');
       if (btcRes.ok) {
         const btcData = await btcRes.json();
-        const price = parseFloat(btcData.lastPrice);
-        const changePercent = parseFloat(btcData.priceChangePercent);
-        const changeAmount = parseFloat(btcData.priceChange);
-        const formattedChange = `${changeAmount >= 0 ? '+' : '-'}$${Math.abs(changeAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const price = btcData.bitcoin.idr;
+        const changePercent = btcData.bitcoin.idr_24h_change;
+        const changeAmount = price - (price / (1 + (changePercent / 100)));
+        const formattedChange = `${changeAmount >= 0 ? '+' : '-'}Rp ${Math.abs(changeAmount).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
         
         marketData.push({
-          symbol: 'BTC/USD',
+          symbol: 'BTC/IDR',
           name: 'Bitcoin',
           price: price,
           changePercent: changePercent,
-          formattedPrice: `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          formattedPrice: `Rp ${price.toLocaleString('id-ID')}`,
           formattedChange: formattedChange,
           type: 'crypto'
         });
@@ -76,9 +76,8 @@ export async function GET() {
       }
     };
 
-    // 2. Fetch USD/IDR & BTC/IDR
+    // 2. Fetch USD/IDR
     await fetchYahoo('USDIDR=X', 'USD to IDR', 'currency', true);
-    await fetchYahoo('BTC-IDR', 'Bitcoin (IDR)', 'crypto', true);
     
     // 3. Fetch BBCA & BBRI (Delayed 15m by IDX)
     await fetchYahoo('BBCA.JK', 'Bank BCA', 'stock');
@@ -88,7 +87,7 @@ export async function GET() {
     // Add fallback data if any failed to load just so UI doesn't look empty
     if (marketData.length === 0) {
        marketData.push({
-          symbol: 'BTC/USD', name: 'Bitcoin', price: 65000, changePercent: 1.2, formattedPrice: '$65,000.00', formattedChange: '+$780.00', type: 'crypto'
+          symbol: 'BTC/IDR', name: 'Bitcoin', price: 1000000000, changePercent: 1.2, formattedPrice: 'Rp 1.000.000.000', formattedChange: '+Rp 12.000.000', type: 'crypto'
        });
     }
 

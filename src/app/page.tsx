@@ -1037,7 +1037,10 @@ function MarketSnapshot() {
           </div>
           <h3>Pasar Terkini</h3>
         </div>
-        <span className="badge" style={{ backgroundColor: 'var(--color-paper)', border: '1px solid var(--color-border)' }}>Live</span>
+        <div className="badge flex items-center gap-2" style={{ backgroundColor: 'var(--color-paper)', border: '1px solid var(--color-border)' }}>
+          <div style={{ width: '6px', height: '6px', backgroundColor: 'var(--color-danger)', borderRadius: '50%', animation: 'blink 1.5s infinite' }}></div>
+          Live
+        </div>
       </div>
       
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
