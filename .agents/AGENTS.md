@@ -55,3 +55,12 @@
 - **Tema Visual**: 
   - Tema diset lewat atribut `data-theme` pada tag `<html>`. CSS ada di `globals.css`.
   - Inisialisasi tema dilakukan di `layout.tsx` lewat sebuah script inline untuk mencegah flicker.
+
+## AI Budget Planner (Dashboard)
+- Grafik alokasi anggaran (Pie Chart) di Dashboard menggunakan porsi ideal yang berlandaskan prinsip Islam (memasukkan unsur Zakat/Sedekah):
+  - Kebutuhan Pokok: 50%
+  - Maksimal Hutang / Cicilan: 20%
+  - Hiburan & Keinginan: 17.5%
+  - Tabungan & Investasi: 10%
+  - Zakat & Sedekah: 2.5%
+- UI Chart harus selalu menggunakan format teks yang rapi dan angka desimal yang benar (misal: 2.5%, jangan dibulatkan menjadi 3%).
