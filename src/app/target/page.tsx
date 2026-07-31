@@ -69,12 +69,13 @@ export default function TargetPage() {
       const existingTxs = localStorage.getItem('ruang_harta_transactions');
       if (existingTxs) {
         const txs = JSON.parse(existingTxs);
-        let inc = 0, exp = 0;
+        let inc = 0, exp = 0, debt = 0;
         txs.forEach((t: any) => {
           if (t.type === 'income') inc += t.amount;
           else if (t.type === 'expense') exp += t.amount;
+          else if (t.type === 'debt') debt += t.amount;
         });
-        setTotalBalance(inc - exp);
+        setTotalBalance(inc - exp - debt);
       }
     };
 
