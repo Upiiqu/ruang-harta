@@ -6,17 +6,9 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ArrowUpRight, ArrowDownRight, CreditCard, Sparkles, Plus, Camera, Wallet, X, Check, TrendingUp, TrendingDown, Activity, Eye, EyeOff, MessageSquare, CalendarDays } from 'lucide-react';
 import { syncTransactionsToServer } from '@/lib/sync';
 
-const data = [
-  { name: 'Jan', balance: 4000, expenses: 2400 },
-  { name: 'Feb', balance: 5000, expenses: 1398 },
-  { name: 'Mar', balance: 4800, expenses: 4800 },
-  { name: 'Apr', balance: 6780, expenses: 3908 },
-  { name: 'May', balance: 8900, expenses: 4800 },
-  { name: 'Jun', balance: 11200, expenses: 3800 },
-];
-
 export default function Home() {
   const router = useRouter();
+  const [chartData, setChartData] = useState<any[]>([]);
   const [showAIInsights, setShowAIInsights] = useState(false);
   const [insightText, setInsightText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -115,6 +107,36 @@ export default function Home() {
       });
       
       setBalanceInfo({ total: totalInc - totalExp - totalDebt, income: cycleInc, expense: cycleExp, debt: cycleDebt });
+
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
+      const newChartData = [];
+      
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const targetMonth = d.getMonth();
+        const targetYear = d.getFullYear();
+        
+        const endOfMonth = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+        
+        let cumulativeInc = 0, cumulativeExp = 0, cumulativeDebt = 0;
+        
+        txs.forEach((t: any) => {
+           const txDate = new Date(t.date);
+           if (txDate <= endOfMonth) {
+              const amt = Number(t.amount) || 0;
+              if (t.type === 'income') cumulativeInc += amt;
+              else if (t.type === 'expense') cumulativeExp += amt;
+              else if (t.type === 'debt') cumulativeDebt += amt;
+           }
+        });
+        
+        newChartData.push({
+           name: monthNames[targetMonth],
+           balance: cumulativeInc - cumulativeExp - cumulativeDebt
+        });
+      }
+      setChartData(newChartData);
     };
 
     const loadLocalTransactions = () => {
@@ -537,7 +559,7 @@ export default function Home() {
           
           <div style={{ height: '300px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--color-chart)" stopOpacity={0.4}/>
