@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, CreditCard, Sparkles, Plus, Camera, Wallet, X, Check, TrendingUp, TrendingDown, Activity, Eye, EyeOff, MessageSquare, CalendarDays } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { ArrowUpRight, ArrowDownRight, CreditCard, Sparkles, Plus, Camera, Wallet, X, Check, TrendingUp, TrendingDown, Activity, Eye, EyeOff, MessageSquare, CalendarDays, PieChart as PieChartIcon } from 'lucide-react';
 import { syncTransactionsToServer } from '@/lib/sync';
 
 export default function Home() {
@@ -584,6 +584,8 @@ export default function Home() {
         <MarketSnapshot />
       </div>
 
+      <AIBudgetPlanner income={balanceInfo.income} />
+
       {/* Text Input Modal Overlay */}
       {isScanningText && !scanResult && !incomeResult && !debtResult && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
@@ -1099,6 +1101,94 @@ function MarketSnapshot() {
           *Data saham IDX memiliki delay 15 menit. Bitcoin real-time.
         </p>
       )}
+  );
+}
+
+function AIBudgetPlanner({ income }: { income: number }) {
+  if (!income || income <= 0) {
+    return (
+      <section className="glass-panel" style={{ marginTop: 'var(--space-6)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-8)' }}>
+        <Sparkles size={32} color="var(--color-accent)" style={{ marginBottom: 'var(--space-4)' }} />
+        <h3 style={{ marginBottom: 'var(--space-2)' }}>AI Budget Planner</h3>
+        <p className="text-muted text-center" style={{ maxWidth: '400px' }}>Catat pemasukan pertamamu bulan ini agar AI dapat menyusun rencana anggaran yang ideal untukmu!</p>
+      </section>
+    );
+  }
+
+  const needs = income * 0.5;
+  const wants = income * 0.3;
+  const savingsDebt = income * 0.2;
+
+  const data = [
+    { name: 'Kebutuhan Pokok', value: needs, color: '#3b82f6' },
+    { name: 'Hiburan & Keinginan', value: wants, color: '#8b5cf6' },
+    { name: 'Tabungan & Cicilan', value: savingsDebt, color: '#10b981' },
+  ];
+
+  return (
+    <section className="glass-panel" style={{ marginTop: 'var(--space-6)' }}>
+      <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-6)' }}>
+        <div className="flex items-center gap-2">
+          <div style={{ background: 'var(--color-paper-3)', width: '32px', height: '32px', borderRadius: 'var(--radius-full)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PieChartIcon size={16} color="var(--color-text)" />
+          </div>
+          <h3>AI Budget Planner (Bulan Ini)</h3>
+        </div>
+        <div className="badge badge-success flex items-center gap-1" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid #10b981' }}>
+          <Sparkles size={12} />
+          <span>Optimal</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-6)', alignItems: 'center' }}>
+        
+        <div style={{ height: '250px', width: '100%', position: 'relative' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={70}
+                outerRadius={100}
+                paddingAngle={5}
+                dataKey="value"
+                stroke="none"
+              >
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip 
+                formatter={(value: number) => `Rp ${value.toLocaleString('id-ID')}`}
+                contentStyle={{ backgroundColor: 'var(--color-paper-3)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text)' }}
+                itemStyle={{ fontWeight: 500 }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+            <span className="text-xs text-muted block">Pemasukan</span>
+            <span className="font-bold" style={{ fontSize: '1rem', color: 'var(--color-text)' }}>
+              Rp {income >= 1000000 ? `${(income/1000000).toFixed(1)}Jt` : `${(income/1000).toFixed(0)}Rb`}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted" style={{ marginBottom: 'var(--space-2)' }}>Berdasarkan pemasukanmu bulan ini, AI menyarankan batas alokasi pengeluaran berikut agar keuanganmu tetap sehat:</p>
+          
+          {data.map((item, idx) => (
+            <div key={idx} className="flex items-center justify-between" style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-paper-2)', borderRadius: 'var(--radius-md)', borderLeft: `4px solid ${item.color}` }}>
+              <div>
+                <span className="text-sm font-medium block" style={{ color: 'var(--color-text)' }}>{item.name}</span>
+                <span className="text-xs text-muted">Maksimal {(item.value / income) * 100}%</span>
+              </div>
+              <span className="font-bold" style={{ color: 'var(--color-text)' }}>Rp {item.value.toLocaleString('id-ID')}</span>
+            </div>
+          ))}
+        </div>
+
+      </div>
     </section>
   );
 }
