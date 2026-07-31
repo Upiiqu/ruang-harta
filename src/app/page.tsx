@@ -1117,11 +1117,13 @@ function AIBudgetPlanner({ income }: { income: number }) {
   }
 
   const needs = income * 0.5;
-  const wants = income * 0.2;
+  const wants = income * 0.175;
   const savings = income * 0.1;
   const debt = income * 0.2;
+  const charity = income * 0.025;
 
   const data = [
+    { name: 'Zakat & Sedekah', value: charity, color: '#f59e0b' },
     { name: 'Kebutuhan Pokok', value: needs, color: '#3b82f6' },
     { name: 'Hiburan & Keinginan', value: wants, color: '#8b5cf6' },
     { name: 'Tabungan & Investasi', value: savings, color: '#10b981' },
@@ -1184,7 +1186,7 @@ function AIBudgetPlanner({ income }: { income: number }) {
             <div key={idx} className="flex items-center justify-between" style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-paper-2)', borderRadius: 'var(--radius-md)', borderLeft: `4px solid ${item.color}` }}>
               <div className="flex flex-col">
                 <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{item.name}</span>
-                <span className="text-xs text-muted">Maksimal {Math.round((item.value / income) * 100)}%</span>
+                <span className="text-xs text-muted">Maksimal {((item.value / income) * 100).toFixed(1).replace('.0', '')}%</span>
               </div>
               <span className="font-bold" style={{ color: 'var(--color-text)' }}>Rp {item.value.toLocaleString('id-ID')}</span>
             </div>
