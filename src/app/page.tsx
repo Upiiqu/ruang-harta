@@ -112,6 +112,7 @@ export default function Home() {
       
       for (let i = 5; i >= 0; i--) {
         const d = new Date();
+        d.setDate(1); // Fix JS Date bug: set to 1st day before changing month
         d.setMonth(d.getMonth() - i);
         const targetMonth = d.getMonth();
         const targetYear = d.getFullYear();
