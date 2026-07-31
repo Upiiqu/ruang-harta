@@ -15,51 +15,92 @@ export default function TargetPage() {
   const [newTargetAmount, setNewTargetAmount] = useState("");
   const [newTargetSaved, setNewTargetSaved] = useState("");
 
-  useEffect(() => {
-    const savedTargets = localStorage.getItem('ruang_harta_targets');
-    if (savedTargets) setTargets(JSON.parse(savedTargets));
+  const loadLocal = () => {
+    const saved = localStorage.getItem('ruang_harta_targets');
+    return saved ? JSON.parse(saved) : [];
+  };
 
-    const existingTxs = localStorage.getItem('ruang_harta_transactions');
-    if (existingTxs) {
-      const txs = JSON.parse(existingTxs);
-      let inc = 0, exp = 0;
-      txs.forEach((t: any) => {
-        if (t.type === 'income') inc += t.amount;
-        else if (t.type === 'expense') exp += t.amount;
-      });
-      setTotalBalance(inc - exp);
-    }
-
-    fetch('/api/targets')
-      .then(res => res.json())
-      .then(data => {
-        if (data.targets?.length > 0) {
-          const mapped = data.targets.map((t: any) => ({
-            id: t.id,
-            name: t.name,
-            targetAmount: Number(t.target_amount),
-            savedAmount: Number(t.saved_amount),
-            createdAt: t.created_at,
-          }));
-          setTargets(mapped);
-          localStorage.setItem('ruang_harta_targets', JSON.stringify(mapped));
+  const syncFromServer = async () => {
+    try {
+      const res = await fetch('/api/targets');
+      const data = await res.json();
+      if (data.targets) {
+        const mapped = data.targets.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          targetAmount: Number(t.target_amount),
+          savedAmount: Number(t.saved_amount),
+          createdAt: t.created_at,
+        }));
+        
+        const local = loadLocal();
+        const serverMap = new Map(mapped.map((t: any) => [t.id, t]));
+        
+        const unsynced: any[] = [];
+        local.forEach((t: any) => {
+          if (!serverMap.has(t.id) && t._localCreatedAt && (Date.now() - t._localCreatedAt < 3600000)) {
+            serverMap.set(t.id, t);
+            unsynced.push(t);
+          }
+        });
+        
+        const merged = Array.from(serverMap.values());
+        
+        const currentJson = JSON.stringify(local);
+        const mergedJson = JSON.stringify(merged);
+        if (currentJson !== mergedJson) {
+          localStorage.setItem('ruang_harta_targets', JSON.stringify(merged));
+          setTargets(merged);
         }
-      })
-      .catch(() => {});
+
+        if (unsynced.length > 0) {
+          syncToServer(merged);
+        }
+      }
+    } catch (err) {
+      console.error('Target sync err:', err);
+    }
+  };
+
+  useEffect(() => {
+    setTargets(loadLocal());
+
+    const updateBalance = () => {
+      const existingTxs = localStorage.getItem('ruang_harta_transactions');
+      if (existingTxs) {
+        const txs = JSON.parse(existingTxs);
+        let inc = 0, exp = 0;
+        txs.forEach((t: any) => {
+          if (t.type === 'income') inc += t.amount;
+          else if (t.type === 'expense') exp += t.amount;
+        });
+        setTotalBalance(inc - exp);
+      }
+    };
+
+    updateBalance();
+    syncFromServer();
+    
+    const interval = setInterval(() => {
+      updateBalance();
+      syncFromServer();
+    }, 5000);
+    
+    return () => clearInterval(interval);
   }, []);
 
-  const syncToServer = async () => {
+  const syncToServer = async (current = targets) => {
     setSyncing(true);
     setSyncMsg('');
     try {
       const res = await fetch('/api/targets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save-all', targets }),
+        body: JSON.stringify({ action: 'save-all', targets: current }),
       });
       const data = await res.json();
       if (data.success) {
-        setSyncMsg(`Tersinkronisasi! ${targets.length} target tersimpan.`);
+        setSyncMsg(`Tersinkronisasi!`);
       } else {
         setSyncMsg('Gagal: ' + (data.error || 'unknown'));
       }
@@ -73,17 +114,19 @@ export default function TargetPage() {
   const saveTargets = (updated: any[]) => {
     setTargets(updated);
     localStorage.setItem('ruang_harta_targets', JSON.stringify(updated));
+    syncToServer(updated);
   };
 
   const handleSaveTarget = () => {
     if (!newTargetName || !newTargetAmount) return;
     
     const target = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name: newTargetName,
       targetAmount: Number(newTargetAmount),
       savedAmount: Number(newTargetSaved) || 0,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      _localCreatedAt: Date.now()
     };
     
     saveTargets([target, ...targets]);
@@ -128,10 +171,7 @@ export default function TargetPage() {
               {syncMsg}
             </span>
           )}
-          <button className="btn btn-secondary flex items-center gap-2" onClick={syncToServer} disabled={syncing}>
-            {syncing ? <RefreshCw size={18} className="spin" /> : <Upload size={18} />}
-            {syncing ? 'Menyimpan...' : 'Simpan ke Server'}
-          </button>
+          {syncing && <RefreshCw size={18} className="spin text-muted" />}
           <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
             <Plus size={16} /> Buat Target Baru
           </button>
