@@ -108,7 +108,6 @@ export default function Home() {
       
       setBalanceInfo({ total: totalInc - totalExp - totalDebt, income: cycleInc, expense: cycleExp, debt: cycleDebt });
 
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
       const newChartData = [];
       
       for (let i = 5; i >= 0; i--) {
