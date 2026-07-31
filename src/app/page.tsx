@@ -1101,6 +1101,7 @@ function MarketSnapshot() {
           *Data saham IDX memiliki delay 15 menit. Bitcoin real-time.
         </p>
       )}
+    </section>
   );
 }
 
