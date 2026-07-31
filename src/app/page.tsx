@@ -1161,7 +1161,7 @@ function AIBudgetPlanner({ income }: { income: number }) {
                 ))}
               </Pie>
               <Tooltip 
-                formatter={(value: number) => `Rp ${value.toLocaleString('id-ID')}`}
+                formatter={(value: any) => `Rp ${Number(value).toLocaleString('id-ID')}`}
                 contentStyle={{ backgroundColor: 'var(--color-paper-3)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text)' }}
                 itemStyle={{ fontWeight: 500 }}
               />
