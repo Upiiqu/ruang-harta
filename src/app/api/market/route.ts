@@ -60,8 +60,11 @@ export async function GET() {
               formattedChange = `${changeAmount >= 0 ? '+' : '-'}Rp ${Math.abs(changeAmount).toLocaleString('id-ID')}`;
             }
 
+            let displaySymbol = symbol.replace('.JK', '').replace('=X', '');
+            if (displaySymbol === 'USDIDR') displaySymbol = 'USD/IDR';
+
             marketData.push({
-              symbol: symbol.replace('.JK', '').replace('=X', ''),
+              symbol: displaySymbol,
               name,
               price,
               changePercent,
