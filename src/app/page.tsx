@@ -584,7 +584,7 @@ export default function Home() {
         <MarketSnapshot />
       </div>
 
-      <AIBudgetPlanner income={balanceInfo.income} />
+      <AIBudgetPlanner income={balanceInfo.income} hideBalance={hideBalance} onToggleHideBalance={toggleHideBalance} />
 
       {/* Text Input Modal Overlay */}
       {isScanningText && !scanResult && !incomeResult && !debtResult && (
@@ -1105,7 +1105,7 @@ function MarketSnapshot() {
   );
 }
 
-function AIBudgetPlanner({ income }: { income: number }) {
+function AIBudgetPlanner({ income, hideBalance, onToggleHideBalance }: { income: number, hideBalance?: boolean, onToggleHideBalance?: () => void }) {
   if (!income || income <= 0) {
     return (
       <section className="glass-panel" style={{ marginTop: 'var(--space-6)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-8)' }}>
@@ -1171,11 +1171,22 @@ function AIBudgetPlanner({ income }: { income: number }) {
               />
             </PieChart>
           </ResponsiveContainer>
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-            <span className="text-xs text-muted block">Pemasukan</span>
-            <span className="font-bold" style={{ fontSize: '1rem', color: 'var(--color-text)' }}>
-              Rp {income >= 1000000 ? `${(income/1000000).toFixed(1)}Jt` : `${(income/1000).toFixed(0)}Rb`}
-            </span>
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <span className="text-xs text-muted block" style={{ marginBottom: '2px' }}>Pemasukan</span>
+            <div className="flex items-center justify-center gap-1" style={{ marginLeft: '18px' }}>
+              <span className="font-bold" style={{ fontSize: '1rem', color: 'var(--color-text)', letterSpacing: hideBalance ? '2px' : 'normal' }}>
+                {hideBalance ? 'Rp *****' : `Rp ${income >= 1000000 ? `${(income/1000000).toFixed(1)}Jt` : `${(income/1000).toFixed(0)}Rb`}`}
+              </span>
+              {onToggleHideBalance && (
+                <button 
+                  onClick={onToggleHideBalance}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--color-text-muted)', padding: '0' }}
+                  title={hideBalance ? "Tampilkan Nominal" : "Sembunyikan Nominal"}
+                >
+                  {hideBalance ? <EyeOff size={14} color="var(--color-accent)" /> : <Eye size={14} />}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
