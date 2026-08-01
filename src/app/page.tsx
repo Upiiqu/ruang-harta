@@ -1006,8 +1006,8 @@ export default function Home() {
           .glass-panel { padding: var(--space-4); }
           .flex-items-center { flex-direction: column; align-items: stretch; gap: var(--space-4); }
           header.flex { flex-direction: column; align-items: flex-start; gap: var(--space-4); }
-          header .flex { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 8px; }
-          header .flex > * { flex: 1 1 calc(50% - 4px); justify-content: center; font-size: 0.875rem; padding: 8px; }
+          header > .flex.gap-4 { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 8px !important; }
+          header > .flex.gap-4 > .btn { flex: 1 1 calc(50% - 4px); justify-content: center; font-size: 0.875rem; padding: 8px; }
           .grid-2-1 { grid-template-columns: 1fr !important; }
         }
       `}</style>
