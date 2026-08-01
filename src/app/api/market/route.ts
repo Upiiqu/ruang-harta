@@ -82,10 +82,52 @@ export async function GET() {
     // 2. Fetch USD/IDR
     await fetchYahoo('USDIDR=X', 'USD to IDR', 'currency', true);
     
-    // 3. Fetch BBCA & BBRI (Delayed 15m by IDX)
+    // 3. Fetch Real Physical Gold per Gram (XAU/USD * USD/IDR / 31.1)
+    const fetchGoldGram = async () => {
+      try {
+        const [goldRes, usdRes] = await Promise.all([
+          fetch('https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1d&range=2d', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
+          fetch('https://query1.finance.yahoo.com/v8/finance/chart/USDIDR=X?interval=1d&range=2d', { headers: { 'User-Agent': 'Mozilla/5.0' } })
+        ]);
+        
+        if (goldRes.ok && usdRes.ok) {
+          const goldData = await goldRes.json();
+          const usdData = await usdRes.json();
+          
+          const goldMeta = goldData?.chart?.result?.[0]?.meta;
+          const usdMeta = usdData?.chart?.result?.[0]?.meta;
+          
+          if (goldMeta && usdMeta) {
+            const goldOunceUsd = goldMeta.regularMarketPrice;
+            const goldOunceUsdPrev = goldMeta.chartPreviousClose || goldMeta.previousClose;
+            
+            const usdIdr = usdMeta.regularMarketPrice;
+            const usdIdrPrev = usdMeta.chartPreviousClose || usdMeta.previousClose;
+            
+            // 1 Troy Ounce = 31.1034768 Grams
+            const price = (goldOunceUsd * usdIdr) / 31.1034768;
+            const prevClose = (goldOunceUsdPrev * usdIdrPrev) / 31.1034768;
+            
+            const changePercent = ((price - prevClose) / prevClose) * 100;
+            const changeAmount = price - prevClose;
+            
+            marketData.push({
+              symbol: 'EMAS',
+              name: 'Emas (1 Gram)',
+              price,
+              changePercent,
+              formattedPrice: `Rp ${price.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+              formattedChange: `${changeAmount >= 0 ? '+' : '-'}Rp ${Math.abs(changeAmount).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+              type: 'commodity'
+            });
+          }
+        }
+      } catch(e) { console.error('Failed to fetch Gold', e); }
+    };
+    await fetchGoldGram();
+    
     await fetchYahoo('BBCA.JK', 'Bank BCA', 'stock');
     await fetchYahoo('BBRI.JK', 'Bank BRI', 'stock');
-    await fetchYahoo('ANTM.JK', 'Emas (ANTM)', 'stock');
 
     // Add fallback data if any failed to load just so UI doesn't look empty
     if (marketData.length === 0) {
