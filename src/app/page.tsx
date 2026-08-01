@@ -1331,3 +1331,6 @@ function AIBudgetPlanner({
           );
         })}
       </div>
+    </section>
+  );
+}
