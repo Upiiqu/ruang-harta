@@ -85,7 +85,7 @@ export async function GET() {
     // 3. Fetch BBCA & BBRI (Delayed 15m by IDX)
     await fetchYahoo('BBCA.JK', 'Bank BCA', 'stock');
     await fetchYahoo('BBRI.JK', 'Bank BRI', 'stock');
-    await fetchYahoo('BMRI.JK', 'Bank Mandiri', 'stock');
+    await fetchYahoo('ANTM.JK', 'Emas (ANTM)', 'stock');
 
     // Add fallback data if any failed to load just so UI doesn't look empty
     if (marketData.length === 0) {
