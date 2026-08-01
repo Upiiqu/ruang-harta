@@ -29,7 +29,10 @@ export default function Home() {
   const [textInput, setTextInput] = useState("");
   const [textError, setTextError] = useState("");
   
-  const [balanceInfo, setBalanceInfo] = useState({ total: 0, income: 0, expense: 0, debt: 0 });
+  const [balanceInfo, setBalanceInfo] = useState({ 
+    total: 0, income: 0, expense: 0, debt: 0,
+    actualBreakdown: { charity: 0, needs: 0, wants: 0, savings: 0, debt: 0 }
+  });
   const [hideBalance, setHideBalance] = useState(false);
   
   const [userName, setUserName] = useState("");
@@ -82,6 +85,7 @@ export default function Home() {
 
       let totalInc = 0, totalExp = 0, totalDebt = 0;
       let cycleInc = 0, cycleExp = 0, cycleDebt = 0;
+      let actCharity = 0, actNeeds = 0, actWants = 0, actSavings = 0, actDebt = 0;
       
       // Start of day and End of day to be safe with timezones
       start.setHours(0, 0, 0, 0);
@@ -98,15 +102,39 @@ export default function Home() {
         }
         else if (t.type === 'expense') {
           totalExp += amt;
-          if (inCycle) cycleExp += amt;
+          if (inCycle) {
+            cycleExp += amt;
+            const cat = (t.category || '').toLowerCase();
+            const desc = (t.storeName || t.description || '').toLowerCase();
+            const combined = cat + ' ' + desc;
+            
+            if (combined.match(/zakat|sedekah|infaq|amal|donasi/)) {
+              actCharity += amt;
+            } else if (combined.match(/tabungan|investasi|reksa dana|saham|deposito|bibit|bareksa|crypto|emas/)) {
+              actSavings += amt;
+            } else if (cat.includes('hiburan') || combined.match(/game|main|jalan|liburan|cafe|kopi|jajan|bioskop/)) {
+              actWants += amt;
+            } else {
+              actNeeds += amt; // default needs
+            }
+          }
         }
         else if (t.type === 'debt') {
           totalDebt += amt;
-          if (inCycle) cycleDebt += amt;
+          if (inCycle) {
+            cycleDebt += amt;
+            actDebt += amt;
+          }
         }
       });
       
-      setBalanceInfo({ total: totalInc - totalExp - totalDebt, income: cycleInc, expense: cycleExp, debt: cycleDebt });
+      setBalanceInfo({ 
+        total: totalInc - totalExp - totalDebt, 
+        income: cycleInc, 
+        expense: cycleExp, 
+        debt: cycleDebt,
+        actualBreakdown: { charity: actCharity, needs: actNeeds, wants: actWants, savings: actSavings, debt: actDebt }
+      });
 
       const newChartData = [];
       
@@ -584,7 +612,12 @@ export default function Home() {
         <MarketSnapshot />
       </div>
 
-      <AIBudgetPlanner income={balanceInfo.income} hideBalance={hideBalance} onToggleHideBalance={toggleHideBalance} />
+      <AIBudgetPlanner 
+        income={balanceInfo.income} 
+        hideBalance={hideBalance} 
+        onToggleHideBalance={toggleHideBalance} 
+        actualBreakdown={balanceInfo.actualBreakdown} 
+      />
 
       {/* Text Input Modal Overlay */}
       {isScanningText && !scanResult && !incomeResult && !debtResult && (
@@ -1105,7 +1138,17 @@ function MarketSnapshot() {
   );
 }
 
-function AIBudgetPlanner({ income, hideBalance, onToggleHideBalance }: { income: number, hideBalance?: boolean, onToggleHideBalance?: () => void }) {
+function AIBudgetPlanner({ 
+  income, 
+  hideBalance, 
+  onToggleHideBalance,
+  actualBreakdown
+}: { 
+  income: number, 
+  hideBalance?: boolean, 
+  onToggleHideBalance?: () => void,
+  actualBreakdown?: { charity: number, needs: number, wants: number, savings: number, debt: number }
+}) {
   if (!income || income <= 0) {
     return (
       <section className="glass-panel" style={{ marginTop: 'var(--space-6)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-8)' }}>
@@ -1122,12 +1165,22 @@ function AIBudgetPlanner({ income, hideBalance, onToggleHideBalance }: { income:
   const debt = income * 0.2;
   const charity = income * 0.025;
 
-  const data = [
+  const dataIdeal = [
     { name: 'Zakat & Sedekah', value: charity, color: '#f59e0b' },
     { name: 'Kebutuhan Pokok', value: needs, color: '#3b82f6' },
     { name: 'Hiburan & Keinginan', value: wants, color: '#8b5cf6' },
     { name: 'Tabungan & Investasi', value: savings, color: '#10b981' },
     { name: 'Maksimal Hutang', value: debt, color: '#ef4444' },
+  ];
+
+  // Map to actual breakdown avoiding 0s on chart (so it can be rendered nicely if empty)
+  const actualTotal = (actualBreakdown?.charity || 0) + (actualBreakdown?.needs || 0) + (actualBreakdown?.wants || 0) + (actualBreakdown?.savings || 0) + (actualBreakdown?.debt || 0);
+  const dataActual = [
+    { name: 'Zakat & Sedekah', value: actualBreakdown?.charity || 0, color: '#f59e0b' },
+    { name: 'Kebutuhan Pokok', value: actualBreakdown?.needs || 0, color: '#3b82f6' },
+    { name: 'Hiburan & Keinginan', value: actualBreakdown?.wants || 0, color: '#8b5cf6' },
+    { name: 'Tabungan & Investasi', value: actualBreakdown?.savings || 0, color: '#10b981' },
+    { name: 'Maksimal Hutang', value: actualBreakdown?.debt || 0, color: '#ef4444' },
   ];
 
   return (
@@ -1141,70 +1194,139 @@ function AIBudgetPlanner({ income, hideBalance, onToggleHideBalance }: { income:
         </div>
         <div className="badge badge-success flex items-center gap-1" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid #10b981' }}>
           <Sparkles size={12} />
-          <span>Optimal</span>
+          <span>Optimal vs Aktual</span>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-6)', alignItems: 'center' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-6)', alignItems: 'start' }}>
         
-        <div style={{ height: '250px', width: '100%', position: 'relative' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={70}
-                outerRadius={100}
-                paddingAngle={5}
-                dataKey="value"
-                stroke="none"
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip 
-                formatter={(value: any) => `Rp ${Number(value).toLocaleString('id-ID')}`}
-                contentStyle={{ backgroundColor: 'var(--color-paper-3)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text)' }}
-                itemStyle={{ fontWeight: 500 }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span className="text-xs text-muted block" style={{ marginBottom: '2px' }}>Pemasukan</span>
-            <div className="flex items-center justify-center gap-1" style={{ marginLeft: '18px' }}>
-              <span className="font-bold" style={{ fontSize: '1rem', color: 'var(--color-text)', letterSpacing: hideBalance ? '2px' : 'normal' }}>
-                {hideBalance ? 'Rp *****' : `Rp ${income >= 1000000 ? `${(income/1000000).toFixed(1)}Jt` : `${(income/1000).toFixed(0)}Rb`}`}
-              </span>
-              {onToggleHideBalance && (
-                <button 
-                  onClick={onToggleHideBalance}
-                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--color-text-muted)', padding: '0' }}
-                  title={hideBalance ? "Tampilkan Nominal" : "Sembunyikan Nominal"}
+        {/* Actual Chart Section */}
+        <div className="flex flex-col items-center">
+          <h4 style={{ marginBottom: 'var(--space-2)', fontSize: '0.9rem', color: 'var(--color-text)' }}>Pengeluaran Aktual</h4>
+          <div style={{ height: '250px', width: '100%', position: 'relative' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={dataActual}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={65}
+                  outerRadius={95}
+                  paddingAngle={5}
+                  dataKey="value"
+                  stroke="none"
                 >
-                  {hideBalance ? <EyeOff size={14} color="var(--color-accent)" /> : <Eye size={14} />}
-                </button>
-              )}
+                  {dataActual.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.value > 0 ? entry.color : 'transparent'} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value: any) => `Rp ${Number(value).toLocaleString('id-ID')}`}
+                  contentStyle={{ backgroundColor: 'var(--color-paper-3)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text)' }}
+                  itemStyle={{ fontWeight: 500 }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <span className="text-xs text-muted block" style={{ marginBottom: '2px' }}>Total Pengeluaran</span>
+              <div className="flex items-center justify-center gap-1" style={{ marginLeft: '18px' }}>
+                <span className="font-bold" style={{ fontSize: '1rem', color: 'var(--color-text)', letterSpacing: hideBalance ? '2px' : 'normal' }}>
+                  {hideBalance ? 'Rp *****' : `Rp ${actualTotal >= 1000000 ? `${(actualTotal/1000000).toFixed(1)}Jt` : `${(actualTotal/1000).toFixed(0)}Rb`}`}
+                </span>
+                {onToggleHideBalance && (
+                  <button 
+                    onClick={onToggleHideBalance}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--color-text-muted)', padding: '0' }}
+                    title={hideBalance ? "Tampilkan Nominal" : "Sembunyikan Nominal"}
+                  >
+                    {hideBalance ? <EyeOff size={14} color="var(--color-accent)" /> : <Eye size={14} />}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-muted" style={{ marginBottom: 'var(--space-2)' }}>Berdasarkan pemasukanmu bulan ini, AI menyarankan batas alokasi pengeluaran berikut agar keuanganmu tetap sehat:</p>
-          
-          {data.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between" style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-paper-2)', borderRadius: 'var(--radius-md)', borderLeft: `4px solid ${item.color}` }}>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{item.name}</span>
-                <span className="text-xs text-muted">Maksimal {((item.value / income) * 100).toFixed(1).replace('.0', '')}%</span>
+        {/* Ideal Chart Section */}
+        <div className="flex flex-col items-center">
+          <h4 style={{ marginBottom: 'var(--space-2)', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>Anggaran Ideal (AI)</h4>
+          <div style={{ height: '250px', width: '100%', position: 'relative' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={dataIdeal}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={65}
+                  outerRadius={95}
+                  paddingAngle={5}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {dataIdeal.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} opacity={0.7} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value: any) => `Rp ${Number(value).toLocaleString('id-ID')}`}
+                  contentStyle={{ backgroundColor: 'var(--color-paper-3)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text)' }}
+                  itemStyle={{ fontWeight: 500 }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <span className="text-xs text-muted block" style={{ marginBottom: '2px' }}>Pemasukan</span>
+              <div className="flex items-center justify-center gap-1" style={{ marginLeft: '18px' }}>
+                <span className="font-bold" style={{ fontSize: '1rem', color: 'var(--color-text-muted)', letterSpacing: hideBalance ? '2px' : 'normal' }}>
+                  {hideBalance ? 'Rp *****' : `Rp ${income >= 1000000 ? `${(income/1000000).toFixed(1)}Jt` : `${(income/1000).toFixed(0)}Rb`}`}
+                </span>
+                {onToggleHideBalance && (
+                  <button 
+                    onClick={onToggleHideBalance}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--color-text-muted)', padding: '0' }}
+                    title={hideBalance ? "Tampilkan Nominal" : "Sembunyikan Nominal"}
+                  >
+                    {hideBalance ? <EyeOff size={14} color="var(--color-text-muted)" /> : <Eye size={14} />}
+                  </button>
+                )}
               </div>
-              <span className="font-bold" style={{ color: 'var(--color-text)' }}>Rp {item.value.toLocaleString('id-ID')}</span>
             </div>
-          ))}
+          </div>
         </div>
 
       </div>
-    </section>
-  );
-}
+
+      <div className="flex flex-col gap-4 mt-4">
+        <p className="text-sm text-muted" style={{ marginBottom: 'var(--space-2)' }}>Perbandingan Pengeluaran Aktual vs Batas Ideal (AI):</p>
+        
+        {dataIdeal.map((item, idx) => {
+          const actualItem = dataActual.find(a => a.name === item.name);
+          const actualVal = actualItem ? actualItem.value : 0;
+          const isOver = actualVal > item.value;
+          const diff = Math.abs(actualVal - item.value);
+
+          return (
+            <div key={idx} className="flex flex-col" style={{ padding: 'var(--space-3)', backgroundColor: 'var(--color-paper-2)', borderRadius: 'var(--radius-md)', borderLeft: `4px solid ${item.color}` }}>
+              <div className="flex items-center justify-between mb-2" style={{ marginBottom: '8px' }}>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{item.name}</span>
+                  <span className="text-xs text-muted">Batas Ideal: Rp {item.value.toLocaleString('id-ID')} ({((item.value / income) * 100).toFixed(1).replace('.0', '')}%)</span>
+                </div>
+                <div className="flex flex-col" style={{ alignItems: 'flex-end' }}>
+                  <span className="font-bold" style={{ color: 'var(--color-text)' }}>Rp {actualVal.toLocaleString('id-ID')}</span>
+                  {actualVal > 0 && (
+                    <span className="text-xs" style={{ color: isOver ? 'var(--color-danger, #ef4444)' : 'var(--color-success, #10b981)', fontWeight: 500 }}>
+                      {isOver ? `Lebih Rp ${diff.toLocaleString('id-ID')}` : `Sisa Rp ${diff.toLocaleString('id-ID')}`}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Progress Bar */}
+              <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--color-paper-3)', borderRadius: '3px', overflow: 'hidden', display: 'flex' }}>
+                 <div style={{ width: `${Math.min((actualVal / item.value) * 100, 100)}%`, height: '100%', backgroundColor: isOver ? 'var(--color-danger, #ef4444)' : item.color, borderRadius: '3px' }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
