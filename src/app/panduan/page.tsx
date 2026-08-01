@@ -97,23 +97,19 @@ export default function PanduanPage() {
         </div>
 
         {/* Fitur 6: Fitur Dashboard Baru */}
-        <div className="glass-panel" style={{ padding: 'var(--space-6)', gridColumn: '1 / -1' }}>
+        <div className="glass-panel" style={{ padding: 'var(--space-6)' }}>
           <div className="flex items-center gap-3 mb-4">
             <div style={{ background: 'var(--color-accent-light)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)' }}>
               <LineChart color="var(--color-accent)" size={24} />
             </div>
-            <h2 className="text-xl font-bold m-0">6. AI Budget Planner, Pasar Terkini & Privasi Layar</h2>
+            <h2 className="text-xl font-bold m-0">6. Fitur Dashboard</h2>
           </div>
-          <p className="text-muted mb-4">Dashboard kini dilengkapi berbagai fitur pintar untuk melacak portofolio dan merencanakan masa depan dengan lebih baik.</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }} className="flex flex-col gap-2 text-sm">
-              <li className="flex gap-2"><span className="text-accent">🥧</span> <b>AI Budget Planner:</b> Bandingkan pengeluaran "Aktual" Anda dengan rasio "Ideal" (50/30/20) yang disarankan oleh AI dalam bentuk Pie Chart bersebelahan.</li>
-              <li className="flex gap-2"><span className="text-accent">👁️</span> <b>Sembunyikan Saldo (Hide Balance):</b> Klik ikon mata pada total saldo untuk menyensor nominal uang dengan bintang (`Rp *****`), sangat aman saat dibuka di tempat umum.</li>
-            </ul>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }} className="flex flex-col gap-2 text-sm">
-              <li className="flex gap-2"><span className="text-accent">📊</span> <b>Pasar Terkini (Market Snapshot):</b> Pantau pergerakan harga instrumen investasi populer seperti Reksa Dana, Saham (IDX), Emas, dan Bitcoin langsung dari Dashboard secara real-time.</li>
-            </ul>
-          </div>
+          <p className="text-muted mb-4">Dashboard kini dilengkapi berbagai fitur pintar untuk melacak portofolio.</p>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }} className="flex flex-col gap-2 text-sm">
+            <li className="flex gap-2"><span className="text-accent">🥧</span> <b>AI Budget Planner:</b> Bandingkan pengeluaran Aktual vs Ideal secara instan.</li>
+            <li className="flex gap-2"><span className="text-accent">👁️</span> <b>Privasi Layar:</b> Klik ikon mata pada total saldo untuk menyembunyikan nominal.</li>
+            <li className="flex gap-2"><span className="text-accent">📊</span> <b>Pasar Terkini:</b> Pantau pergerakan Saham (IDX), Emas, dan Bitcoin real-time.</li>
+          </ul>
         </div>
       </div>
 
