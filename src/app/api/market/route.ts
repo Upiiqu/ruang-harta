@@ -82,47 +82,77 @@ export async function GET() {
     // 2. Fetch USD/IDR
     await fetchYahoo('USDIDR=X', 'USD to IDR', 'currency', true);
     
-    // 3. Fetch Real Physical Gold per Gram (XAU/USD * USD/IDR / 31.1)
+    // 3. Fetch Gold from Pegadaian (via zpi.web.id)
     const fetchGoldGram = async () => {
       try {
-        const [goldRes, usdRes] = await Promise.all([
-          fetch('https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1d&range=2d', { headers: { 'User-Agent': 'Mozilla/5.0' } }),
-          fetch('https://query1.finance.yahoo.com/v8/finance/chart/USDIDR=X?interval=1d&range=2d', { headers: { 'User-Agent': 'Mozilla/5.0' } })
-        ]);
+        const res = await fetch('https://api.zpi.web.id/v1/finance:pegadaian/gold-price?apikey=zpi_r9icgaxmls3a7dc4s4e9sw0wx6', {
+          headers: { 'User-Agent': 'Mozilla/5.0' },
+          next: { revalidate: 60 }
+        });
         
-        if (goldRes.ok && usdRes.ok) {
-          const goldData = await goldRes.json();
-          const usdData = await usdRes.json();
+        if (res.ok) {
+          const json = await res.json();
+          console.log("PEGADAIAN API RESPONSE:", JSON.stringify(json).substring(0, 500));
           
-          const goldMeta = goldData?.chart?.result?.[0]?.meta;
-          const usdMeta = usdData?.chart?.result?.[0]?.meta;
+          let price = 0;
+          let prevPrice = 0;
           
-          if (goldMeta && usdMeta) {
-            const goldOunceUsd = goldMeta.regularMarketPrice;
-            const goldOunceUsdPrev = goldMeta.chartPreviousClose || goldMeta.previousClose;
+          // Coba mencari data harga emas 1 gram secara dinamis
+          const findPriceInArray = (arr: any[]) => {
+            // Cari objek yang merepresentasikan 1 gram (misal "1 gram", "1g", "1")
+            const oneGramItem = arr.find(item => {
+              const str = JSON.stringify(item).toLowerCase();
+              return str.includes('"1 gram"') || str.includes('"1g"') || str.includes('"berat":"1"') || str.includes('"weight":"1"');
+            });
             
-            const usdIdr = usdMeta.regularMarketPrice;
-            const usdIdrPrev = usdMeta.chartPreviousClose || usdMeta.previousClose;
+            const item = oneGramItem || arr[0]; // Fallback ke elemen pertama
+            if (!item) return 0;
             
-            // 1 Troy Ounce = 31.1034768 Grams
-            const price = (goldOunceUsd * usdIdr) / 31.1034768;
-            const prevClose = (goldOunceUsdPrev * usdIdrPrev) / 31.1034768;
-            
-            const changePercent = ((price - prevClose) / prevClose) * 100;
-            const changeAmount = price - prevClose;
-            
+            // Cari field harga yang umum
+            return item.price || item.buy || item.jual || item.harga || item.sell || item.current_price || 0;
+          };
+
+          if (json.data) {
+            if (Array.isArray(json.data)) {
+              price = findPriceInArray(json.data);
+            } else if (typeof json.data === 'object') {
+               // Kalau data bentuknya map/object, coba cek array di dalamnya
+               const keys = Object.keys(json.data);
+               for (const k of keys) {
+                 if (Array.isArray(json.data[k])) {
+                   price = findPriceInArray(json.data[k]);
+                   if (price > 0) break;
+                 }
+               }
+               if (price === 0) {
+                 price = json.data.price || json.data.buy || json.data.sell || json.data.harga || json.data.jual || 0;
+               }
+            }
+          } else {
+             price = json.price || json.buy || json.harga || 0;
+          }
+          
+          if (typeof price === 'string') {
+             price = parseFloat(price.replace(/[^0-9.-]+/g,""));
+          }
+          
+          if (price > 0) {
             marketData.push({
               symbol: 'EMAS',
-              name: 'Emas (1 Gram)',
+              name: 'Emas Pegadaian',
               price,
-              changePercent,
+              changePercent: 0,
               formattedPrice: `Rp ${price.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
-              formattedChange: `${changeAmount >= 0 ? '+' : '-'}Rp ${Math.abs(changeAmount).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+              formattedChange: `Rp 0`,
               type: 'commodity'
             });
+          } else {
+            console.warn("Harga emas tidak ditemukan dari response ZPI Pegadaian");
           }
+        } else {
+          console.error("ZPI API returned status:", res.status);
         }
-      } catch(e) { console.error('Failed to fetch Gold', e); }
+      } catch(e) { console.error('Failed to fetch Pegadaian Gold from ZPI', e); }
     };
     await fetchGoldGram();
     
