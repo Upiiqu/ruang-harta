@@ -85,7 +85,7 @@ export async function GET() {
     // 3. Fetch Gold from Pegadaian (via zpi.web.id)
     const fetchGoldGram = async () => {
       try {
-        const res = await fetch('https://api.zpi.web.id/v1/finance:pegadaian/gold-price?apikey=zpi_r9icgaxmls3a7dc4s4e9sw0wx6', {
+        const res = await fetch('https://api.zpi.web.id/v1/finance:pegadaian/gold-price?api_key=zpi_r9icgaxmls3a7dc4s4e9sw0wx6', {
           headers: { 'User-Agent': 'Mozilla/5.0' },
           next: { revalidate: 60 }
         });
