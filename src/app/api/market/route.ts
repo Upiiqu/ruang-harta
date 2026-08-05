@@ -94,7 +94,7 @@ export async function GET() {
           const json = await res.json();
           console.log("PEGADAIAN API RESPONSE:", JSON.stringify(json).substring(0, 500));
           
-          let price = 0;
+          let price: any = 0;
           let prevPrice = 0;
           
           // Coba mencari data harga emas 1 gram secara dinamis
