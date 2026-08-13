@@ -82,33 +82,25 @@ export async function GET() {
     // 2. Fetch USD/IDR
     await fetchYahoo('USDIDR=X', 'USD to IDR', 'currency', true);
     
-    // 3. Fetch Gold from Pegadaian (via zpi.web.id)
+    // 3. Fetch Gold from Logam Mulia API (Antam Indonesia)
     const fetchGoldGram = async () => {
       try {
-        const res = await fetch('https://api.zpi.web.id/v1/finance:pegadaian/gold-price?api_key=zpi_r9icgaxmls3a7dc4s4e9sw0wx6', {
+        const res = await fetch('https://logam-mulia-api.iamutaki.workers.dev/api/antam', {
           headers: { 'User-Agent': 'Mozilla/5.0' },
           next: { revalidate: 60 }
         });
         
         if (res.ok) {
           const json = await res.json();
-          console.log("PEGADAIAN API RESPONSE:", JSON.stringify(json).substring(0, 500));
-          
           let price: any = 0;
-          let prevPrice = 0;
           
-          // Coba mencari data harga emas 1 gram secara dinamis
           const findPriceInArray = (arr: any[]) => {
-            // Cari objek yang merepresentasikan 1 gram (misal "1 gram", "1g", "1")
             const oneGramItem = arr.find(item => {
               const str = JSON.stringify(item).toLowerCase();
               return str.includes('"1 gram"') || str.includes('"1g"') || str.includes('"berat":"1"') || str.includes('"weight":"1"');
             });
-            
-            const item = oneGramItem || arr[0]; // Fallback ke elemen pertama
+            const item = oneGramItem || arr[0]; 
             if (!item) return 0;
-            
-            // Cari field harga yang umum
             return item.price || item.buy || item.jual || item.harga || item.sell || item.current_price || 0;
           };
 
@@ -116,7 +108,6 @@ export async function GET() {
             if (Array.isArray(json.data)) {
               price = findPriceInArray(json.data);
             } else if (typeof json.data === 'object') {
-               // Kalau data bentuknya map/object, coba cek array di dalamnya
                const keys = Object.keys(json.data);
                for (const k of keys) {
                  if (Array.isArray(json.data[k])) {
@@ -124,9 +115,7 @@ export async function GET() {
                    if (price > 0) break;
                  }
                }
-               if (price === 0) {
-                 price = json.data.price || json.data.buy || json.data.sell || json.data.harga || json.data.jual || 0;
-               }
+               if (price === 0) price = json.data.price || json.data.buy || json.data.sell || json.data.harga || json.data.jual || 0;
             }
           } else {
              price = json.price || json.buy || json.harga || 0;
@@ -139,7 +128,7 @@ export async function GET() {
           if (price > 0) {
             marketData.push({
               symbol: 'EMAS',
-              name: 'Emas Pegadaian',
+              name: 'Emas Antam',
               price,
               changePercent: 0,
               formattedPrice: `Rp ${price.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
@@ -147,12 +136,12 @@ export async function GET() {
               type: 'commodity'
             });
           } else {
-            console.warn("Harga emas tidak ditemukan dari response ZPI Pegadaian");
+            console.warn("Harga emas tidak ditemukan dari response Antam API");
           }
         } else {
-          console.error("ZPI API returned status:", res.status);
+          console.error("Antam API returned status:", res.status);
         }
-      } catch(e) { console.error('Failed to fetch Pegadaian Gold from ZPI', e); }
+      } catch(e) { console.error('Failed to fetch Antam Gold from API', e); }
     };
     await fetchGoldGram();
     
